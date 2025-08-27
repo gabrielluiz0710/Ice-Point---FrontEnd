@@ -1,0 +1,52 @@
+import './assets/base.css'
+
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+
+import App from './App.vue'
+import router from './router'
+
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
+import {
+  faPhone,
+  faEnvelope,
+  faMapMarkerAlt,
+  faHeart,
+  faIceCream,
+  faFaceGrinHearts,
+  faSackDollar,
+} from '@fortawesome/free-solid-svg-icons'
+
+import {
+  faWhatsapp,
+  faFacebookF,
+  faInstagram,
+  faTwitter,
+  faLinkedinIn,
+} from '@fortawesome/free-brands-svg-icons'
+
+library.add(
+  faPhone,
+  faEnvelope,
+  faMapMarkerAlt,
+  faHeart,
+  faIceCream,
+  faFaceGrinHearts,
+  faSackDollar,
+  faWhatsapp,
+  faFacebookF,
+  faInstagram,
+  faTwitter,
+  faLinkedinIn,
+)
+
+const app = createApp(App)
+
+app.use(createPinia())
+app.use(router)
+
+app.component('font-awesome-icon', FontAwesomeIcon)
+
+app.mount('#app')
