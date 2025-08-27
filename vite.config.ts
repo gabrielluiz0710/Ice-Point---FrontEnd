@@ -7,6 +7,9 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    cssMinify: 'esbuild',
+  },
   plugins: [
     vue(),
     vueJsx(),
