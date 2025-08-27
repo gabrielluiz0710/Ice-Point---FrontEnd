@@ -94,7 +94,7 @@ const currentYear = new Date().getFullYear();
 
 <style scoped>
 .main-footer {
-    background-color: #00bcd4;
+    background-color: var(--c-azul-footer);
     color: white;
     font-family: 'Fredoka', sans-serif;
     padding-top: 4rem;
@@ -261,7 +261,7 @@ const currentYear = new Date().getFullYear();
 }
 
 .footer-bottom {
-    background-color: #00a4bd;
+    background-color: var(--c-azul-dark-footer);
     padding: 1.2rem 2rem;
     text-align: center;
     font-size: 0.9rem;
