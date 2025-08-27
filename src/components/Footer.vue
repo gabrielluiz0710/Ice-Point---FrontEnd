@@ -169,24 +169,60 @@ const currentYear = new Date().getFullYear();
 .social-link {
     color: white;
     text-decoration: none;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.8rem;
     font-size: 1rem;
-    transition: color 0.3s ease, transform 0.3s ease;
-    will-change: transform;
+    position: relative;
+    padding-bottom: 4px;
+    transition: color 0.3s ease;
 }
 
-.contact-link:hover,
-.social-link:hover {
-    font-weight: bolder;
-    transform: translateX(5px) scale(1.05);
+.contact-link span,
+.social-link span {
+    transition: all 0.3s ease;
+}
+
+.contact-link::after,
+.social-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #ffffff, #eaeaea);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+
+.contact-link:hover::after,
+.social-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+.contact-link:hover .contact-icon,
+.social-link:hover .social-icon {
+    transform: rotate(-5deg) scale(1.3);
+    color: var(--c-branco);
+}
+
+.contact-link:hover span,
+.social-link:hover span {
+    color: white;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.7),
+        0 0 10px #ffffff,
+        0 0 15px rgb(214, 214, 214);
 }
 
 .contact-icon,
 .social-icon {
     font-size: 1.2rem;
     min-width: 20px;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
 }
 
 .about-text {
