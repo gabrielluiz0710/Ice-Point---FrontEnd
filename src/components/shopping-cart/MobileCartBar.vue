@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, TransitionGroup, Transition } from 'vue'
+// NOVO: Importando os ícones do Font Awesome
+import { faChevronUp, faIceCream } from '@fortawesome/free-solid-svg-icons'
 
 interface CartItem {
     id: number
@@ -17,11 +19,9 @@ const isExpanded = ref(false)
 </script>
 
 <template>
-    <div class="mobile-cart-bar" :class="{ 'visible': cartItems.length > 0, 'expanded': isExpanded }">
+    <div class="mobile-cart-bar" :class="{ 'expanded': isExpanded }">
         <button class="central-toggle-button" aria-label="Ver carrinho" @click="isExpanded = !isExpanded">
-            <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
-            </svg>
+            <font-awesome-icon :icon="faChevronUp" class="arrow-icon" />
         </button>
 
         <div class="bar-content">
@@ -34,17 +34,14 @@ const isExpanded = ref(false)
                     </div>
                     <button class="toggle-button" aria-label="Ver carrinho" @click="isExpanded = !isExpanded">
                         Ver Carrinho
-                        <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                            viewBox="0 0 24 24">
-                            <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
-                        </svg>
+                        <font-awesome-icon :icon="faChevronUp" class="arrow-icon" />
                     </button>
                 </div>
 
                 <div class="collapsed-actions">
                     <Transition name="fade-button">
-                        <button v-if="!isExpanded" class="action-button" aria-label="Finalizar Compra">
-                            Finalizar Compra
+                        <button v-if="!isExpanded" class="action-button" aria-label="Finalizar Compra"
+                            :disabled="cartItems.length === 0"> Finalizar Compra
                         </button>
                     </Transition>
                 </div>
@@ -52,16 +49,26 @@ const isExpanded = ref(false)
 
             <div class="expanded-view">
                 <h4 class="expanded-title">Seu Pedido</h4>
-                <TransitionGroup name="list" tag="ul" class="summary-list">
-                    <li v-for="item in cartItems" :key="item.id" class="summary-item">
-                        <div class="item-info-left">
-                            <span class="item-name">{{ item.name }}</span>
-                            <span class="item-details">{{ item.quantity }}x</span>
-                        </div>
-                        <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
-                    </li>
-                </TransitionGroup>
-                <button class="checkout-button">Finalizar Compra</button>
+
+                <template v-if="cartItems.length > 0">
+                    <TransitionGroup name="list" tag="ul" class="summary-list">
+                        <li v-for="item in cartItems" :key="item.id" class="summary-item">
+                            <div class="item-info-left">
+                                <span class="item-name">{{ item.name }}</span>
+                                <span class="item-details">{{ item.quantity }}x</span>
+                            </div>
+                            <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
+                        </li>
+                    </TransitionGroup>
+                </template>
+                <div v-else class="empty-cart-message">
+                    <font-awesome-icon :icon="faIceCream" class="empty-cart-icon" />
+                    <p class="empty-cart-title">Seu carrinho está vazio</p>
+                    <p class="empty-cart-subtitle">Adicione seus sabores favoritos para vê-los aqui!</p>
+                </div>
+
+                <button class="checkout-button" :disabled="cartItems.length === 0"> Finalizar Compra
+                </button>
             </div>
         </div>
     </div>
@@ -78,8 +85,7 @@ const isExpanded = ref(false)
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
     z-index: 1000;
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* AJUSTE: Removido o transform para a barra ser sempre visível em mobile */
     display: none;
 }
 
@@ -87,10 +93,6 @@ const isExpanded = ref(false)
     .mobile-cart-bar {
         display: block;
     }
-}
-
-.mobile-cart-bar.visible {
-    transform: translateY(0);
 }
 
 .bar-content {
@@ -105,11 +107,10 @@ const isExpanded = ref(false)
     gap: 1rem;
 }
 
-/* AJUSTE: Container para o botão e as informações de preço */
 .total-info {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 1rem;
 }
 
 .price-details {
@@ -159,7 +160,7 @@ const isExpanded = ref(false)
     background: var(--c-rosa);
     color: var(--c-branco);
     border: none;
-    padding: 1.1rem 1.2rem;
+    padding: 0.8rem 1.2rem;
     border-radius: 50px;
     font-weight: 700;
     font-family: 'Fredoka', sans-serif;
@@ -172,10 +173,18 @@ const isExpanded = ref(false)
     background-color: var(--c-rosa-dark);
 }
 
-/* NOVO: Botão centralizado para telas pequenas */
+/* NOVO: Estilo para botões desabilitados */
+.action-button:disabled,
+.checkout-button:disabled {
+    background: #e0e0e0;
+    color: #a8a8a8;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
 .central-toggle-button {
     display: none;
-    /* Escondido por padrão */
     position: absolute;
     top: 0;
     left: 50%;
@@ -200,8 +209,9 @@ const isExpanded = ref(false)
 }
 
 .arrow-icon {
-    fill: currentColor;
     transition: transform 0.3s ease;
+    font-size: 1em;
+    /* Ajuste o tamanho do ícone se necessário */
 }
 
 .mobile-cart-bar.expanded .arrow-icon {
@@ -219,7 +229,6 @@ const isExpanded = ref(false)
     transform: scale(0.9);
 }
 
-/* Visão expandida (sem alterações) */
 .expanded-view {
     max-height: 0;
     overflow: hidden;
@@ -236,6 +245,30 @@ const isExpanded = ref(false)
     text-align: center;
     margin-bottom: 1rem;
     font-weight: 500;
+}
+
+/* NOVO: Estilos para a mensagem de carrinho vazio */
+.empty-cart-message {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--c-text-light);
+}
+
+.empty-cart-icon {
+    font-size: 3rem;
+    color: var(--c-rosa-light);
+    margin-bottom: 1rem;
+}
+
+.empty-cart-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--c-text-dark);
+    margin-bottom: 0.25rem;
+}
+
+.empty-cart-subtitle {
+    font-size: 0.9rem;
 }
 
 .summary-list {
@@ -288,10 +321,10 @@ const isExpanded = ref(false)
     border-radius: 12px;
     cursor: pointer;
     margin-top: 1rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.2s ease;
 }
 
-.checkout-button:hover {
+.checkout-button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
@@ -307,27 +340,22 @@ const isExpanded = ref(false)
     transform: scale(0.9);
 }
 
-/* NOVO: Media Query para telas bem pequenas */
 @media (max-width: 480px) {
     .toggle-button {
         display: none;
-        /* Esconde o botão "Ver Carrinho" original */
     }
 
     .central-toggle-button {
         display: flex;
-        /* Mostra o botão central */
     }
 
     .collapsed-view {
         justify-content: space-between;
         margin-top: 10px;
-        /* Mantém o espaçamento para o que sobrar */
     }
 
     .price-details {
         text-align: left;
-        /* Garante alinhamento caso o layout mude */
     }
 }
 </style>
