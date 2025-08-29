@@ -4,6 +4,14 @@ import type { Ref } from 'vue'
 import ProductCard from '@/components/shopping-cart/ProductCard.vue'
 import OrderSummary from '@/components/shopping-cart/OrderSummary.vue'
 import MobileCartBar from '@/components/shopping-cart/MobileCartBar.vue'
+import brigadeiroImg from '@/assets/images/cards/brigadeiro.png';
+import tentacaoImg from '@/assets/images/cards/tentacao.png';
+import ituLeiteCondensadoImg from '@/assets/images/cards/ituleitecondensado.png';
+import abacaxiImg from '@/assets/images/cards/abacaxi.png';
+import ituMaracujaImg from '@/assets/images/cards/itumaracuja.png';
+import morangoLeiteImg from '@/assets/images/cards/morangoleite.png';
+import limaoSuicoImg from '@/assets/images/cards/limaosuico.png';
+import milhoImg from '@/assets/images/cards/milho.png';
 
 interface Product {
     id: number
@@ -23,24 +31,24 @@ const productCategories: Ref<Category[]> = ref([
     {
         name: 'Picolés ao Leite',
         products: [
-            { id: 1, name: 'Chocolate', description: 'Cremoso e intenso, o clássico que todos amam.', price: 8.50, image: 'src/assets/images/cards/abacaxi.png', quantity: 0 },
-            { id: 2, name: 'Doce de Leite', description: 'Aveludado, com pedaços de doce de leite argentino.', price: 8.50, image: 'src/assets/images/cards/brigadeiro.png', quantity: 0 },
-            { id: 3, name: 'Ninho Trufado', description: 'Leite Ninho com recheio cremoso de trufa de chocolate.', price: 9.00, image: 'src/assets/images/cards/milho.png', quantity: 0 },
+            { id: 1, name: 'Chocolate', description: 'Cremoso e intenso, o clássico que todos amam.', price: 8.50, image: limaoSuicoImg, quantity: 0 },
+            { id: 2, name: 'Doce de Leite', description: 'Aveludado, com pedaços de doce de leite argentino.', price: 8.50, image: morangoLeiteImg, quantity: 0 },
+            { id: 3, name: 'Ninho Trufado', description: 'Leite Ninho com recheio cremoso de trufa de chocolate.', price: 9.00, image: ituMaracujaImg, quantity: 0 },
         ],
     },
     {
         name: 'Picolés de Fruta',
         products: [
-            { id: 4, name: 'Limão Suíço', description: 'Refrescante e cítrico, feito com suco natural.', price: 7.00, image: 'src/assets/images/cards/limaosuico.png', quantity: 0 },
-            { id: 5, name: 'Morango', description: 'Puro sabor da fruta, leve e delicioso.', price: 7.00, image: 'src/assets/images/cards/morangoleite.png', quantity: 0 },
-            { id: 6, name: 'Maracujá com Leite Condensado', description: 'A combinação perfeita entre o azedinho e o doce.', price: 7.50, image: 'src/assets/images/cards/tentacao.png', quantity: 0 },
+            { id: 4, name: 'Limão Suíço', description: 'Refrescante e cítrico, feito com suco natural.', price: 7.00, image: abacaxiImg, quantity: 0 },
+            { id: 5, name: 'Morango', description: 'Puro sabor da fruta, leve e delicioso.', price: 7.00, image: ituLeiteCondensadoImg, quantity: 0 },
+            { id: 6, name: 'Maracujá com Leite Condensado', description: 'A combinação perfeita entre o azedinho e o doce.', price: 7.50, image: tentacaoImg, quantity: 0 },
         ],
     },
     {
         name: 'Sorvetes de Massa (500ml)',
         products: [
-            { id: 7, name: 'Flocos Crocante', description: 'Creme com pedaços crocantes de chocolate.', price: 25.00, image: 'src/assets/images/cards/itumaracuja.png', quantity: 0 },
-            { id: 8, name: 'Pistache Premium', description: 'Sabor autêntico de pistache importado.', price: 30.00, image: 'src/assets/images/cards/ituleitecondensado.png', quantity: 0 },
+            { id: 7, name: 'Flocos Crocante', description: 'Creme com pedaços crocantes de chocolate.', price: 25.00, image: brigadeiroImg, quantity: 0 },
+            { id: 8, name: 'Pistache Premium', description: 'Sabor autêntico de pistache importado.', price: 30.00, image: milhoImg, quantity: 0 },
         ]
     }
 ])
