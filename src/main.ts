@@ -17,6 +17,7 @@ import {
   faIceCream,
   faFaceGrinHearts,
   faSackDollar,
+  faChevronUp,
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
@@ -40,6 +41,7 @@ library.add(
   faInstagram,
   faTwitter,
   faLinkedinIn,
+  faChevronUp,
 )
 
 const app = createApp(App)
