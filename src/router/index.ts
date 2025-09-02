@@ -26,7 +26,7 @@ const router = createRouter({
     {
       path: '/pedido-confirmado',
       name: 'OrderConfirmation',
-      component: () => OrderConfirmationView,
+      component: OrderConfirmationView,
     },
     {
       path: '/sabores',
