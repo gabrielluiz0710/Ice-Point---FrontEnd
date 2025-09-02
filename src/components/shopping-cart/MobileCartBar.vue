@@ -244,6 +244,7 @@ const isExpanded = ref(false)
     text-align: center;
     margin-bottom: 1rem;
     font-weight: 500;
+    color: var(--c-text-dark);
 }
 
 .empty-cart-message {
