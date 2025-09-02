@@ -12,6 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faPix } from '@fortawesome/free-brands-svg-icons'
 import { useRouter } from 'vue-router'
+import { nextTick } from 'vue'
 
 const checkoutStore = useCheckoutStore()
 const router = useRouter()
@@ -32,15 +33,16 @@ const initialValues = {
     agreedToTerms: checkoutStore.agreedToTerms,
 };
 
-async function finalizeOrder(formValues: any) {
+function finalizeOrder(formValues: any) {
     checkoutStore.paymentMethod = formValues.paymentMethod;
     checkoutStore.agreedToTerms = formValues.agreedToTerms;
 
     console.log("PEDIDO FINALIZADO!", { ...checkoutStore });
 
-    await router.push('/pedido-confirmado');
+    nextTick(() => {
+        router.push('/pedido-confirmado');
+    });
 }
-
 </script>
 
 <template>
