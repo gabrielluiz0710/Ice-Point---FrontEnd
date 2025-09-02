@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, TransitionGroup, Transition } from 'vue'
-// NOVO: Importando os ícones do Font Awesome
 import { faChevronUp, faIceCream } from '@fortawesome/free-solid-svg-icons'
 
 interface CartItem {
@@ -25,15 +24,14 @@ const isExpanded = ref(false)
         </button>
 
         <div class="bar-content">
-            <div class="collapsed-view">
+            <div class="collapsed-view" @click="isExpanded = !isExpanded">
                 <div class="total-info">
                     <div class="price-details">
                         <span class="item-count">{{ cartItems.length }} {{ cartItems.length === 1 ? 'item' : 'itens'
                             }}</span>
                         <span class="total-price">R$ {{ total.toFixed(2) }}</span>
                     </div>
-                    <button class="toggle-button" aria-label="Ver carrinho" @click="isExpanded = !isExpanded">
-                        Ver Carrinho
+                    <button class="toggle-button" aria-label="Ver carrinho" @click.stop> Ver Carrinho
                         <font-awesome-icon :icon="faChevronUp" class="arrow-icon" />
                     </button>
                 </div>
@@ -41,7 +39,7 @@ const isExpanded = ref(false)
                 <div class="collapsed-actions">
                     <Transition name="fade-button">
                         <button v-if="!isExpanded" class="action-button" aria-label="Finalizar Compra"
-                            :disabled="cartItems.length === 0"> Finalizar Compra
+                            :disabled="cartItems.length === 0" @click.stop> Finalizar Compra
                         </button>
                     </Transition>
                 </div>
@@ -55,7 +53,7 @@ const isExpanded = ref(false)
                         <li v-for="item in cartItems" :key="item.id" class="summary-item">
                             <div class="item-info-left">
                                 <span class="item-name">{{ item.name }}</span>
-                                <span class="item-details">{{ item.quantity }}x</span>
+                                <span class="item-details">{{ item.quantity }} x R$ {{ item.price.toFixed(2) }}</span>
                             </div>
                             <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
                         </li>
@@ -84,9 +82,9 @@ const isExpanded = ref(false)
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
-    z-index: 1000;
-    /* AJUSTE: Removido o transform para a barra ser sempre visível em mobile */
+    z-index: 200;
     display: none;
+
 }
 
 @media (max-width: 1024px) {
@@ -173,7 +171,6 @@ const isExpanded = ref(false)
     background-color: var(--c-rosa-dark);
 }
 
-/* NOVO: Estilo para botões desabilitados */
 .action-button:disabled,
 .checkout-button:disabled {
     background: #e0e0e0;
@@ -233,6 +230,8 @@ const isExpanded = ref(false)
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.5s ease-in-out, margin-top 0.5s ease-in-out;
+    display: flex;
+    flex-direction: column;
 }
 
 .mobile-cart-bar.expanded .expanded-view {
@@ -247,7 +246,6 @@ const isExpanded = ref(false)
     font-weight: 500;
 }
 
-/* NOVO: Estilos para a mensagem de carrinho vazio */
 .empty-cart-message {
     padding: 2rem 1rem;
     text-align: center;
@@ -276,8 +274,28 @@ const isExpanded = ref(false)
     padding: 0;
     margin: 0;
     margin-bottom: 1.5rem;
-    max-height: 35vh;
+    /* max-height: 35vh; */
     overflow-y: auto;
+    flex: 1;
+}
+
+.summary-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.summary-list::-webkit-scrollbar-track {
+    background: var(--c-branco);
+    border-radius: 4px;
+}
+
+.summary-list::-webkit-scrollbar-thumb {
+    background-color: var(--c-rosa-light);
+    border-radius: 4px;
+    border: 2px solid var(--c-branco);
+}
+
+.summary-list::-webkit-scrollbar-thumb:hover {
+    background-color: var(--c-rosa);
 }
 
 .summary-item {
@@ -286,6 +304,7 @@ const isExpanded = ref(false)
     align-items: center;
     padding: 0.8rem 0;
     border-bottom: 1px solid var(--c-bege);
+    margin-right: 5px;
 }
 
 .item-info-left {
@@ -322,6 +341,8 @@ const isExpanded = ref(false)
     cursor: pointer;
     margin-top: 1rem;
     transition: all 0.2s ease;
+    font-family: 'Fredoka', sans-serif;
+
 }
 
 .checkout-button:hover:not(:disabled) {
@@ -340,7 +361,7 @@ const isExpanded = ref(false)
     transform: scale(0.9);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 820px) {
     .toggle-button {
         display: none;
     }

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-// Definindo as propriedades que o componente recebe
 const props = defineProps<{
     product: {
         id: number
@@ -13,10 +12,8 @@ const props = defineProps<{
     }
 }>()
 
-// Definindo os eventos que o componente pode emitir
 const emit = defineEmits(['update:quantity'])
 
-// Funções para manipular a quantidade localmente e emitir o evento
 function increment() {
     const newQuantity = props.product.quantity + 1;
     emit('update:quantity', { productId: props.product.id, newQuantity });
@@ -47,8 +44,8 @@ function handleInput(event: Event) {
                 <span class="product-price">R$ {{ product.price.toFixed(2) }}</span>
                 <div class="quantity-control">
                     <button @click="decrement" class="quantity-btn" aria-label="Diminuir quantidade">-</button>
-                    <input type="number" class="quantity-input" :value="product.quantity" @input="handleInput"
-                        min="0" />
+                    <input type="number" class="quantity-input" :value="product.quantity" @input="handleInput" min="0"
+                        inputmode="numeric" pattern="[0-9]*" />
                     <button @click="increment" class="quantity-btn" aria-label="Aumentar quantidade">+</button>
                 </div>
             </div>
@@ -131,7 +128,6 @@ function handleInput(event: Event) {
     color: var(--c-azul);
 }
 
-/* Controle de Quantidade */
 .quantity-control {
     display: flex;
     align-items: center;

@@ -67,7 +67,6 @@ defineProps<{
     padding-bottom: 0.75rem;
 }
 
-/* Linha decorativa abaixo do título */
 .summary-title::after {
     content: '';
     position: absolute;
@@ -80,7 +79,6 @@ defineProps<{
     border-radius: 2px;
 }
 
-/* Estilos para o carrinho vazio */
 .empty-cart {
     text-align: center;
     padding: 2.5rem 1rem;
@@ -110,7 +108,6 @@ defineProps<{
     margin: 0 0 1.5rem 0;
 }
 
-/* NOVO: Layout com Flexbox para os itens */
 .summary-item {
     display: flex;
     justify-content: space-between;
@@ -179,7 +176,6 @@ defineProps<{
     box-shadow: 0 8px 25px rgba(218, 96, 118, 0.4);
 }
 
-/* NOVO: Estilo para botão desabilitado */
 .checkout-button:disabled {
     background: #e0e0e0;
     color: #a8a8a8;
@@ -187,7 +183,6 @@ defineProps<{
     box-shadow: none;
 }
 
-/* Animação da lista */
 .list-enter-active,
 .list-leave-active {
     transition: all 0.5s ease;

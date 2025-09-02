@@ -12,6 +12,15 @@ import ituMaracujaImg from '@/assets/images/cards/itumaracuja.png';
 import morangoLeiteImg from '@/assets/images/cards/morangoleite.png';
 import limaoSuicoImg from '@/assets/images/cards/limaosuico.png';
 import milhoImg from '@/assets/images/cards/milho.png';
+import CheckoutProgressBar from '@/components/shopping-cart/CheckoutProgressBar.vue'
+import { faShoppingCart, faUser, faReceipt } from '@fortawesome/free-solid-svg-icons'
+
+const checkoutSteps = [
+    { name: 'Carrinho', icon: faShoppingCart },
+    { name: 'Dados & Pagamento', icon: faUser },
+    { name: 'Confirmação', icon: faReceipt }
+]
+const currentCheckoutStep = 1
 
 interface Product {
     id: number
@@ -63,9 +72,8 @@ const totalCartPrice = computed(() => {
     return cartItems.value.reduce((total, item) => total + (item.price * item.quantity), 0)
 })
 
-// --- Funções para manipular a quantidade ---
 function updateQuantity({ productId, newQuantity }: { productId: number; newQuantity: number }) {
-    const quantity = Math.max(0, newQuantity); // Garante que a quantidade não seja negativa
+    const quantity = Math.max(0, newQuantity);
     for (const category of productCategories.value) {
         const product = category.products.find(p => p.id === productId)
         if (product) {
@@ -82,6 +90,8 @@ function updateQuantity({ productId, newQuantity }: { productId: number; newQuan
             <h1>Monte seu Pedido</h1>
             <p>Escolha seus produtos favoritos e adicione ao carrinho!</p>
         </header>
+
+        <CheckoutProgressBar :steps="checkoutSteps" :current-step="currentCheckoutStep" />
 
         <div class="cart-layout">
             <main class="product-grid">
@@ -114,7 +124,7 @@ function updateQuantity({ productId, newQuantity }: { productId: number; newQuan
 
 .cart-header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 1.5rem;
     animation: slide-down 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
@@ -173,7 +183,6 @@ function updateQuantity({ productId, newQuantity }: { productId: number; newQuan
     top: 5rem;
 }
 
-/* --- Animações --- */
 @keyframes slide-down {
     from {
         opacity: 0;
@@ -186,7 +195,6 @@ function updateQuantity({ productId, newQuantity }: { productId: number; newQuan
     }
 }
 
-/* --- Responsividade --- */
 @media (max-width: 1024px) {
     .cart-layout {
         grid-template-columns: 1fr;
@@ -194,12 +202,10 @@ function updateQuantity({ productId, newQuantity }: { productId: number; newQuan
 
     .order-summary-desktop {
         display: none;
-        /* Esconde o resumo da lateral */
     }
 
     .shopping-cart-view {
         padding: 2rem 1.5rem 8rem;
-        /* Adiciona espaço no final para a barra mobile */
     }
 }
 
@@ -214,7 +220,6 @@ function updateQuantity({ productId, newQuantity }: { productId: number; newQuan
 
     .product-list {
         grid-template-columns: 1fr;
-        /* Uma coluna em telas muito pequenas */
     }
 
     .shopping-cart-view {

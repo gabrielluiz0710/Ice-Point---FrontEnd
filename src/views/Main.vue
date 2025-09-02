@@ -129,7 +129,7 @@ const featuresData = [
             Escolha seus picolés favoritos e faça sua festa ainda mais especial levando para seus convidados os sabores
             da Ice Point!
           </p>
-          <a href="#" class="cta-button">Montar Carrinho</a>
+          <a href="/carrinho" class="cta-button">Montar Carrinho</a>
         </div>
       </div>
     </section>
