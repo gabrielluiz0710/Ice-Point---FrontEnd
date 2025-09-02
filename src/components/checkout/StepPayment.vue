@@ -32,14 +32,15 @@ const initialValues = {
     agreedToTerms: checkoutStore.agreedToTerms,
 };
 
-function finalizeOrder(formValues: any) {
+async function finalizeOrder(formValues: any) {
     checkoutStore.paymentMethod = formValues.paymentMethod;
     checkoutStore.agreedToTerms = formValues.agreedToTerms;
 
     console.log("PEDIDO FINALIZADO!", { ...checkoutStore });
 
-    router.push('/pedido-confirmado');
+    await router.push('/pedido-confirmado');
 }
+
 </script>
 
 <template>
