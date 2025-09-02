@@ -1,8 +1,12 @@
 <script setup lang="ts">
-defineProps<{
-    steps: { name: string, icon: any }[]
+import { computed } from 'vue'
+
+const props = defineProps<{
+    steps: { name: string; icon: any }[]
     currentStep: number
 }>()
+
+const isAllComplete = computed(() => props.currentStep >= props.steps.length)
 </script>
 
 <template>
@@ -11,8 +15,8 @@ defineProps<{
             <div class="progress-fill" :style="{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }"></div>
         </div>
         <div v-for="(step, index) in steps" :key="step.name" class="step-item" :class="{
-            'active': index + 1 === currentStep,
-            'completed': index + 1 < currentStep
+            'active': index + 1 === currentStep && !isAllComplete,
+            'completed': index + 1 < currentStep || isAllComplete
         }">
             <div class="step-icon">
                 <font-awesome-icon :icon="step.icon" />

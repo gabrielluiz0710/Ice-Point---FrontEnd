@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ref, TransitionGroup, Transition } from 'vue'
-import { faChevronUp, faIceCream } from '@fortawesome/free-solid-svg-icons'
+import { ref, watch, TransitionGroup, Transition } from 'vue'
+import { faChevronUp, faIceCream, faTrashCan } from '@fortawesome/free-solid-svg-icons'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 interface CartItem {
     id: number
@@ -15,6 +18,26 @@ defineProps<{
 }>()
 
 const isExpanded = ref(false)
+
+const emit = defineEmits(['empty-cart'])
+const showConfirmation = ref(false)
+
+watch(showConfirmation, (isShowing) => {
+    if (isShowing) {
+        document.body.classList.add('modal-open')
+    } else {
+        document.body.classList.remove('modal-open')
+    }
+})
+
+function confirmEmptyCart() {
+    emit('empty-cart')
+    showConfirmation.value = false
+}
+
+function goToCheckout() {
+    router.push('/checkout')
+}
 </script>
 
 <template>
@@ -28,7 +51,7 @@ const isExpanded = ref(false)
                 <div class="total-info">
                     <div class="price-details">
                         <span class="item-count">{{ cartItems.length }} {{ cartItems.length === 1 ? 'item' : 'itens'
-                            }}</span>
+                        }}</span>
                         <span class="total-price">R$ {{ total.toFixed(2) }}</span>
                     </div>
                     <button class="toggle-button" aria-label="Ver carrinho" @click.stop> Ver Carrinho
@@ -39,14 +62,20 @@ const isExpanded = ref(false)
                 <div class="collapsed-actions">
                     <Transition name="fade-button">
                         <button v-if="!isExpanded" class="action-button" aria-label="Finalizar Compra"
-                            :disabled="cartItems.length === 0" @click.stop> Finalizar Compra
+                            :disabled="cartItems.length === 0" @click.stop="goToCheckout"> Finalizar Compra
                         </button>
                     </Transition>
                 </div>
             </div>
 
             <div class="expanded-view">
-                <h4 class="expanded-title">Seu Pedido</h4>
+                <div class="expanded-header">
+                    <h4 class="expanded-title">Seu Pedido</h4>
+                    <button v-if="cartItems.length > 0" class="empty-cart-button" @click="showConfirmation = true">
+                        <font-awesome-icon :icon="faTrashCan" />
+                        Esvaziar
+                    </button>
+                </div>
 
                 <template v-if="cartItems.length > 0">
                     <TransitionGroup name="list" tag="ul" class="summary-list">
@@ -65,10 +94,25 @@ const isExpanded = ref(false)
                     <p class="empty-cart-subtitle">Adicione seus sabores favoritos para vê-los aqui!</p>
                 </div>
 
-                <button class="checkout-button" :disabled="cartItems.length === 0"> Finalizar Compra
+                <button class="checkout-button" :disabled="cartItems.length === 0" @click="goToCheckout">
+                    Finalizar Compra
                 </button>
             </div>
         </div>
+        <Teleport to="body">
+            <Transition name="fade">
+                <div v-if="showConfirmation" class="confirmation-modal">
+                    <div class="confirmation-box">
+                        <h4>Esvaziar carrinho?</h4>
+                        <p>Todos os itens serão removidos.</p>
+                        <div class="confirmation-actions">
+                            <button class="btn-cancel" @click="showConfirmation = false">Cancelar</button>
+                            <button class="btn-confirm" @click="confirmEmptyCart">Sim</button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>
 
@@ -208,7 +252,6 @@ const isExpanded = ref(false)
 .arrow-icon {
     transition: transform 0.3s ease;
     font-size: 1em;
-    /* Ajuste o tamanho do ícone se necessário */
 }
 
 .mobile-cart-bar.expanded .arrow-icon {
@@ -239,12 +282,40 @@ const isExpanded = ref(false)
     margin-top: 1.5rem;
 }
 
+.expanded-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    margin-bottom: 1rem;
+}
+
 .expanded-title {
     font-size: 1.2rem;
-    text-align: center;
-    margin-bottom: 1rem;
     font-weight: 500;
     color: var(--c-text-dark);
+}
+
+.empty-cart-button {
+    position: absolute;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: none;
+    border: none;
+    color: var(--c-text-light);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-family: 'Fredoka', sans-serif;
+}
+
+.empty-cart-button:hover {
+    color: #e53e3e;
+    background-color: rgba(229, 62, 62, 0.1);
 }
 
 .empty-cart-message {
@@ -275,7 +346,6 @@ const isExpanded = ref(false)
     padding: 0;
     margin: 0;
     margin-bottom: 1.5rem;
-    /* max-height: 35vh; */
     overflow-y: auto;
     flex: 1;
 }
@@ -379,5 +449,87 @@ const isExpanded = ref(false)
     .price-details {
         text-align: left;
     }
+}
+
+.confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.confirmation-box {
+    background: var(--c-branco);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    width: 80%;
+    max-width: 300px;
+}
+
+.confirmation-box h4 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--c-text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.confirmation-box p {
+    font-size: 0.9rem;
+    color: var(--c-text);
+    margin-bottom: 1.5rem;
+}
+
+.confirmation-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.confirmation-actions button {
+    flex: 1;
+    padding: 0.75rem;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    font-family: 'Fredoka', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel {
+    background-color: #eee;
+    color: var(--c-text);
+}
+
+.btn-cancel:hover {
+    background-color: #ddd;
+}
+
+.btn-confirm {
+    background-color: #e53e3e;
+    color: var(--c-branco);
+}
+
+.btn-confirm:hover {
+    background-color: #c53030;
+    transform: translateY(-2px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>

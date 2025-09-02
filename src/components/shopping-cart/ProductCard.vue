@@ -171,6 +171,7 @@ function handleInput(event: Event) {
     padding: 5px;
     margin-left: 5px;
     margin-right: 5px;
+    font-family: 'Fredoka', sans-serif;
 }
 
 .quantity-input::-webkit-outer-spin-button,
