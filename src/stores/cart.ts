@@ -30,26 +30,29 @@ export const useCartStore = defineStore('cart', () => {
       products: [
         {
           id: 1,
-          name: 'Chocolate',
-          description: 'Cremoso e intenso, o clássico que todos amam.',
-          price: 8.5,
+          name: 'Limão Suíço',
+          description:
+            'O equilíbrio perfeito entre o azedinho do limão e a cremosidade do leite, uma combinação refrescante.',
+          price: 2.0,
           image: limaoSuicoImg,
           quantity: 0,
         },
         {
           id: 2,
-          name: 'Doce de Leite',
-          description: 'Aveludado, com pedaços de doce de leite argentino.',
-          price: 8.5,
-          image: morangoLeiteImg,
+          name: 'Milho Verde',
+          description:
+            'Sabor autêntico de milho fresquinho, transformado em um picolé cremoso que lembra festa junina.',
+          price: 2.0,
+          image: milhoImg,
           quantity: 0,
         },
         {
           id: 3,
-          name: 'Ninho Trufado',
-          description: 'Leite Ninho com recheio cremoso de trufa de chocolate.',
-          price: 9.0,
-          image: ituMaracujaImg,
+          name: 'Morango',
+          description:
+            'A doçura natural do morango em um picolé suave e cremoso, feito com pedaços da fruta.',
+          price: 2.0,
+          image: morangoLeiteImg,
           quantity: 0,
         },
       ],
@@ -59,47 +62,56 @@ export const useCartStore = defineStore('cart', () => {
       products: [
         {
           id: 4,
-          name: 'Limão Suíço',
-          description: 'Refrescante e cítrico, feito com suco natural.',
-          price: 7.0,
+          name: 'Abacaxi',
+          description:
+            'Refrescante e cítrico, feito com suco natural da fruta para um sabor tropical autêntico.',
+          price: 1.5,
           image: abacaxiImg,
-          quantity: 0,
-        },
-        {
-          id: 5,
-          name: 'Morango',
-          description: 'Puro sabor da fruta, leve e delicioso.',
-          price: 7.0,
-          image: ituLeiteCondensadoImg,
-          quantity: 0,
-        },
-        {
-          id: 6,
-          name: 'Maracujá com Leite Condensado',
-          description: 'A combinação perfeita entre o azedinho e o doce.',
-          price: 7.5,
-          image: tentacaoImg,
           quantity: 0,
         },
       ],
     },
     {
-      name: 'Sorvetes de Massa (500ml)',
+      name: 'Ituzinhos',
+      products: [
+        {
+          id: 5,
+          name: 'Ituzinho de Maracujá',
+          description: 'A intensidade do maracujá em dose dupla com recheio por dentro.',
+          price: 3.5,
+          image: ituMaracujaImg,
+          quantity: 0,
+        },
+        {
+          id: 6,
+          name: 'Ituzinho de Leite Condensado',
+          description:
+            'A doçura inconfundível do leite condensado em um formato super cremoso e irresistível.',
+          price: 3.5,
+          image: ituLeiteCondensadoImg,
+          quantity: 0,
+        },
+      ],
+    },
+    {
+      name: 'Skimo',
       products: [
         {
           id: 7,
-          name: 'Flocos Crocante',
-          description: 'Creme com pedaços crocantes de chocolate.',
-          price: 25.0,
+          name: 'Brigadeiro',
+          description:
+            'Cremoso sorvete de brigadeiro com uma casquinha crocante de chocolate ao leite.',
+          price: 4.0,
           image: brigadeiroImg,
           quantity: 0,
         },
         {
           id: 8,
-          name: 'Pistache Premium',
-          description: 'Sabor autêntico de pistache importado.',
-          price: 30.0,
-          image: milhoImg,
+          name: 'Tentação',
+          description:
+            'A clássica combinação de morango e chocolate, com uma cobertura que quebra a cada mordida.',
+          price: 4.0,
+          image: tentacaoImg,
           quantity: 0,
         },
       ],

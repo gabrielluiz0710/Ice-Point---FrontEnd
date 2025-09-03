@@ -10,11 +10,13 @@ import {
     faMobileAlt,
     faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const checkoutStore = useCheckoutStore()
 const emit = defineEmits(['completed'])
 const showAgeModal = ref(false)
+
+const firstInputRef = ref<HTMLInputElement | null>(null)
 
 type PersonalData = typeof checkoutStore.personalData;
 
@@ -25,7 +27,12 @@ interface FormField {
     placeholder: string;
     icon: any;
     mask?: string;
+    inputmode?: 'numeric' | 'text' | 'tel' | 'email';
 }
+
+onMounted(() => {
+    firstInputRef.value?.focus()
+})
 
 const schema = yup.object({
     fullName: yup.string().required('O nome é obrigatório').min(3, 'Digite seu nome completo'),
@@ -40,14 +47,11 @@ const schema = yup.object({
             if (!value) return true
             const parts = value.split('/')
             if (parts.length !== 3) return false
-
             const day = parseInt(parts[0], 10)
             const month = parseInt(parts[1], 10)
             const year = parseInt(parts[2], 10)
-
             if (isNaN(day) || isNaN(month) || isNaN(year)) return false
             if (month < 1 || month > 12) return false
-
             const date = new Date(year, month - 1, day)
             return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
         })
@@ -63,11 +67,11 @@ const schema = yup.object({
 });
 
 const formFields: FormField[] = [
-    { name: 'fullName', label: 'Nome Completo', type: 'text', placeholder: 'Digite seu nome', icon: faUser },
-    { name: 'email', label: 'Email', type: 'email', placeholder: 'seu@email.com', icon: faEnvelope },
-    { name: 'cpf', label: 'CPF', type: 'text', mask: '###.###.###-##', placeholder: '000.000.000-00', icon: faIdCard },
-    { name: 'phone', label: 'Celular', type: 'tel', mask: '(##) #####-####', placeholder: '(99) 99999-9999', icon: faMobileAlt },
-    { name: 'birthDate', label: 'Data de Nascimento', type: 'text', mask: '##/##/####', placeholder: 'DD/MM/AAAA', icon: faCalendarAlt },
+    { name: 'fullName', label: 'Nome Completo', type: 'text', placeholder: 'Digite seu nome', icon: faUser, inputmode: 'text' },
+    { name: 'email', label: 'Email', type: 'email', placeholder: 'seu@email.com', icon: faEnvelope, inputmode: 'email' },
+    { name: 'cpf', label: 'CPF', type: 'text', mask: '###.###.###-##', placeholder: '000.000.000-00', icon: faIdCard, inputmode: 'numeric' },
+    { name: 'phone', label: 'Celular', type: 'tel', mask: '(##) #####-####', placeholder: '(99) 99999-9999', icon: faMobileAlt, inputmode: 'numeric' },
+    { name: 'birthDate', label: 'Data de Nascimento', type: 'text', mask: '##/##/####', placeholder: 'DD/MM/AAAA', icon: faCalendarAlt, inputmode: 'numeric' },
 ]
 
 function applyMask(value: string, mask: string): string {
@@ -136,11 +140,14 @@ function onSubmit(values: any) {
                 <div class="input-wrapper">
                     <font-awesome-icon v-if="fieldData.icon" :icon="fieldData.icon" class="input-icon" />
 
+
                     <Field :name="fieldData.name" v-model="checkoutStore.personalData[fieldData.name]"
                         v-slot="{ field: veeField }">
                         <input v-bind="veeField" :placeholder="fieldData.placeholder" :type="fieldData.type"
-                            :id="fieldData.name" @input="handleInput($event, fieldData.mask, veeField.onChange)"
-                            @blur="fieldData.name === 'birthDate' ? checkAgeAndShowModal(veeField.value) : null" />
+                            :id="fieldData.name" :inputmode="fieldData.inputmode"
+                            @input="handleInput($event, fieldData.mask, veeField.onChange)"
+                            @blur="fieldData.name === 'birthDate' ? checkAgeAndShowModal(veeField.value) : null"
+                            :ref="el => { if (index === 0) firstInputRef = el as HTMLInputElement }" />
                     </Field>
                 </div>
                 <ErrorMessage :name="fieldData.name" class="error-message" />
@@ -209,6 +216,14 @@ function onSubmit(values: any) {
     transform: translateY(-50%);
     color: var(--c-text-light);
     transition: color .2s
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    z-index: 5;
 }
 
 .form-field input {
@@ -298,7 +313,6 @@ function onSubmit(values: any) {
     display: flex;
     flex-direction: column;
     opacity: 0;
-    /* Começa invisível para a animação */
     animation: field-enter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
@@ -322,10 +336,8 @@ function onSubmit(values: any) {
     transition: color 0.2s;
 }
 
-/* O <Field> da VeeValidate renderiza um <input>, então podemos estilizá-lo assim */
 .form-field input {
     padding: 0.9rem 0.9rem 0.9rem 3rem;
-    /* Espaço para o ícone */
     border-radius: 12px;
     border: 2px solid var(--color-border);
     font-family: 'Fredoka', sans-serif;
@@ -333,6 +345,7 @@ function onSubmit(values: any) {
     background-color: var(--color-background-soft);
     transition: border-color 0.2s, box-shadow 0.2s;
     width: 100%;
+    background-color: var(--c-branco);
 }
 
 .form-field input:focus {

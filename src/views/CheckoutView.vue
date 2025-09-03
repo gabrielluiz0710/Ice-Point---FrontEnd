@@ -28,7 +28,7 @@ const activeStep = ref(1)
 const personalDataSection = ref<HTMLElement | null>(null);
 const addressSection = ref<HTMLElement | null>(null);
 const paymentSection = ref<HTMLElement | null>(null);
-
+const addressStepKey = ref(0);
 const checkoutSteps = [
     { name: 'Carrinho', icon: faShoppingCart },
     { name: 'Dados & Pagamento', icon: faUser },
@@ -44,30 +44,43 @@ function formatDate(dateString: string): string {
     return `${day}/${month}/${year}`;
 }
 
+function scrollToSection(step: number) {
+    let targetElement: HTMLElement | null = null;
+
+    switch (step) {
+        case 1:
+            targetElement = personalDataSection.value;
+            break;
+        case 2:
+            targetElement = addressSection.value;
+            break;
+        case 3:
+            targetElement = paymentSection.value;
+            break;
+    }
+
+    if (targetElement) {
+        const header = document.querySelector<HTMLElement>('.header');
+
+        const headerHeight = header ? header.offsetHeight : 0;
+
+        const elementPosition = targetElement.getBoundingClientRect().top + window.scrollY;
+
+        const offsetPosition = elementPosition - headerHeight - 20;
+
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+    }
+}
+
 watch(activeStep, (newStep) => {
-
-    setTimeout(() => {
-        let targetElement: HTMLElement | null = null;
-
-        switch (newStep) {
-            case 1:
-                targetElement = personalDataSection.value;
-                break;
-            case 2:
-                targetElement = addressSection.value;
-                break;
-            case 3:
-                targetElement = paymentSection.value;
-                break;
-        }
-
-        if (targetElement) {
-            const yOffset = -80;
-            const y = targetElement.getBoundingClientRect().top + window.scrollY + yOffset;
-
-            window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-    }, 350);
+    nextTick(() => {
+        setTimeout(() => {
+            scrollToSection(newStep);
+        }, 350);
+    });
 });
 
 onMounted(() => {
@@ -102,7 +115,7 @@ onMounted(() => {
 
         <div class="checkout-layout">
             <main class="checkout-main">
-                <section ref="personalDataSection" class="checkout-section"
+                <section id="dados-pessoais" ref="personalDataSection" class="checkout-section"
                     :class="{ 'active-section': activeStep === 1 }">
                     <div class="section-header">
                         <h2 class="section-title">
@@ -126,37 +139,90 @@ onMounted(() => {
                     </Transition>
                 </section>
 
-                <section ref="addressSection" class="checkout-section"
+                <section id="endereco-entrega" ref="addressSection" class="checkout-section"
                     :class="{ 'disabled': activeStep < 2, 'active-section': activeStep === 2 }">
                     <div class="section-header">
                         <h2 class="section-title">
                             <font-awesome-icon :icon="faMapMarkedAlt" /> Endereço e Entrega
                         </h2>
-                        <button v-if="activeStep > 2" class="edit-button" @click="activeStep = 2">
+                        <button v-if="activeStep > 2" class="edit-button" @click="activeStep = 2; addressStepKey++">
                             <font-awesome-icon :icon="faPen" /> Modificar
                         </button>
                     </div>
                     <Transition name="fade-step" mode="out-in">
                         <div v-if="activeStep === 2" class="step-wrapper">
-                            <StepAddress @completed="activeStep = 3" />
+                            <StepAddress :key="addressStepKey" @completed="activeStep = 3" />
                         </div>
                         <div v-else-if="activeStep > 2" class="section-summary-display">
-                            <p><span>Endereço:</span> {{ checkoutStore.address.street }}, {{
-                                checkoutStore.address.number }}</p>
-                            <p v-if="checkoutStore.address.complement"><span>Complemento:</span> {{
-                                checkoutStore.address.complement }}</p>
-                            <p><span>Bairro:</span> {{ checkoutStore.address.neighborhood }}</p>
-                            <p><span>Cidade/UF:</span> {{ checkoutStore.address.city }} / {{ checkoutStore.address.state
-                                }}</p>
-                            <p><span>Método:</span> {{ checkoutStore.deliveryMethod === 'delivery' ? 'Entrega' :
-                                'Retirada' }}</p>
-                            <p><span>Quando:</span> {{ formatDate(checkoutStore.schedule.date) }} às {{
-                                checkoutStore.schedule.time }}</p>
+
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <span class="summary-label">Quando</span>
+                                    <p class="summary-value">{{ formatDate(checkoutStore.schedule.date) }} às {{
+                                        checkoutStore.schedule.time }}</p>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Método</span>
+                                    <p class="summary-value">{{ checkoutStore.deliveryMethod === 'delivery' ? 'Entrega'
+                                        : 'Retirada' }}</p>
+                                </div>
+                            </div>
+
+                            <div v-if="checkoutStore.deliveryMethod === 'delivery'" class="address-summary-card">
+                                <h4 class="address-card-title">
+                                    {{ checkoutStore.useSameAddressForDelivery ?
+                                        'Endereço de Entrega' : 'Entregar em Outro Endereço' }}
+                                </h4>
+                                <div class="address-card-body">
+                                    <template v-if="checkoutStore.useSameAddressForDelivery">
+                                        <p class="address-line">{{ checkoutStore.address.street }}, {{
+                                            checkoutStore.address.number }}</p>
+                                        <p v-if="checkoutStore.address.complement" class="address-line complement">{{
+                                            checkoutStore.address.complement }}</p>
+                                        <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
+                                        <div class="address-line-group">
+                                            <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
+                                            }}</span>
+                                            <span>CEP: {{ checkoutStore.address.cep }}</span>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <p class="address-line">{{ checkoutStore.deliveryAddress.street }}, {{
+                                            checkoutStore.deliveryAddress.number }}</p>
+                                        <p v-if="checkoutStore.deliveryAddress.complement"
+                                            class="address-line complement">{{ checkoutStore.deliveryAddress.complement
+                                            }}</p>
+                                        <p class="address-line">{{ checkoutStore.deliveryAddress.neighborhood }}</p>
+                                        <div class="address-line-group">
+                                            <span>{{ checkoutStore.deliveryAddress.city }} / {{
+                                                checkoutStore.deliveryAddress.state }}</span>
+                                            <span>CEP: {{ checkoutStore.deliveryAddress.cep }}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div v-if="checkoutStore.deliveryMethod === 'pickup'" class="address-summary-card">
+                                <h4 class="address-card-title">Endereço de Faturamento</h4>
+                                <div class="address-card-body">
+                                    <p class="address-line">{{ checkoutStore.address.street }}, {{
+                                        checkoutStore.address.number }}</p>
+                                    <p v-if="checkoutStore.address.complement" class="address-line complement">{{
+                                        checkoutStore.address.complement
+                                    }}</p>
+                                    <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
+                                    <div class="address-line-group">
+                                        <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
+                                        }}</span>
+                                        <span>CEP: {{ checkoutStore.address.cep }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </Transition>
                 </section>
 
-                <section ref="paymentSection" class="checkout-section"
+                <section id="pagamento" ref="paymentSection" class="checkout-section"
                     :class="{ 'disabled': activeStep < 3, 'active-section': activeStep === 3 }">
                     <div class="section-header">
                         <h2 class="section-title">
@@ -256,21 +322,85 @@ onMounted(() => {
 
 .section-summary-display {
     padding: 2rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    display: flex;
+    /* Mude de 'grid' para 'flex' */
+    flex-direction: column;
+    /* Adicione esta linha */
+    gap: 1.5rem;
+    /* Mude de '1rem' para '1.5rem' */
     font-size: 0.95rem;
 }
 
-.section-summary-display p {
-    display: flex;
-    flex-direction: column;
+/* ADICIONE ESTE BLOCO DE ESTILOS NO FINAL */
+.summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
 }
 
-.section-summary-display span {
+.summary-item .summary-label {
     font-weight: 300;
     font-size: 0.8rem;
     color: var(--c-text-light);
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.summary-item .summary-value {
+    font-weight: 500;
+    color: var(--c-text);
+}
+
+.address-summary-card {
+    background-color: #f8f9fa;
+    /* Um cinza bem claro */
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+}
+
+.address-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--c-azul);
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.address-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--c-text);
+    font-size: 0.9rem;
+}
+
+.address-line.complement {
+    color: var(--c-text-light);
+    font-size: 0.85rem;
+}
+
+.address-line-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+/* Responsividade */
+@media (max-width: 576px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .address-line-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
 }
 
 .checkout-sidebar {

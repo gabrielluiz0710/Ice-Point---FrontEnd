@@ -56,6 +56,10 @@ export const useCheckoutStore = defineStore('checkout', () => {
 
   const personalData = ref({} as PersonalData)
   const address = ref({} as AddressData)
+
+  const deliveryAddress = ref({} as AddressData)
+  const useSameAddressForDelivery = ref(true)
+
   const deliveryMethod = ref<'pickup' | 'delivery' | null>(null)
   const schedule = ref({ date: '', time: '' })
   const paymentMethod = ref<'pix' | 'cash' | 'card'>('pix')
@@ -106,6 +110,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
   return {
     personalData,
     address,
+    deliveryAddress,
+    useSameAddressForDelivery,
     deliveryMethod,
     schedule,
     paymentMethod,

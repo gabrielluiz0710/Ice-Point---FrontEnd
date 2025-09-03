@@ -77,10 +77,27 @@ onMounted(() => {
                     <p>{{ checkoutStore.personalData.fullName }}</p>
                 </div>
                 <div class="detail-box">
-                    <h2 class="box-title"><font-awesome-icon :icon="faMapMarkerAlt" /> Endereço de Entrega</h2>
-                    <p>{{ checkoutStore.address.street }}, {{ checkoutStore.address.number }}</p>
-                    <p>{{ checkoutStore.address.neighborhood }}, {{ checkoutStore.address.city }} - {{
-                        checkoutStore.address.state }}</p>
+                    <h2 class="box-title">
+                        <font-awesome-icon :icon="faMapMarkerAlt" />
+                        {{ checkoutStore.deliveryMethod === 'pickup' ? 'Endereço de Faturamento' : 'Endereço de Entrega'
+                        }}
+                    </h2>
+
+                    <template
+                        v-if="!checkoutStore.useSameAddressForDelivery && checkoutStore.deliveryMethod === 'delivery'">
+                        <p>{{ checkoutStore.deliveryAddress.street }}, {{ checkoutStore.deliveryAddress.number }}</p>
+                        <p v-if="checkoutStore.deliveryAddress.complement">{{ checkoutStore.deliveryAddress.complement
+                        }}</p>
+                        <p>{{ checkoutStore.deliveryAddress.neighborhood }}, {{ checkoutStore.deliveryAddress.city }} -
+                            {{
+                                checkoutStore.deliveryAddress.state }}</p>
+                    </template>
+                    <template v-else>
+                        <p>{{ checkoutStore.address.street }}, {{ checkoutStore.address.number }}</p>
+                        <p v-if="checkoutStore.address.complement">{{ checkoutStore.address.complement }}</p>
+                        <p>{{ checkoutStore.address.neighborhood }}, {{ checkoutStore.address.city }} - {{
+                            checkoutStore.address.state }}</p>
+                    </template>
                 </div>
                 <div class="detail-box">
                     <h2 class="box-title"><font-awesome-icon :icon="faCalendarAlt" /> Agendamento</h2>
@@ -115,7 +132,7 @@ onMounted(() => {
                     <button @click="router.push('/profile/orders')" class="btn-primary">
                         <font-awesome-icon :icon="faUserCircle" /> Ver Meus Pedidos
                     </button>
-                    <button @click="router.push('/')" class="btn-secondary">
+                    <button @click="router.push('/carrinho')" class="btn-secondary">
                         <font-awesome-icon :icon="faShoppingBag" /> Comprar Novamente
                     </button>
                 </div>
@@ -309,6 +326,7 @@ onMounted(() => {
     display: flex;
     justify-content: center;
     gap: 1rem;
+    align-items: center;
 }
 
 .btn-primary,
@@ -324,6 +342,9 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    text-align: center;
+    justify-content: center;
+    min-width: 220px;
 }
 
 .btn-primary {
