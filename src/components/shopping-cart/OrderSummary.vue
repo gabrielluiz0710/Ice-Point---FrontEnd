@@ -124,7 +124,7 @@ function goToCheckout() {
 
 .summary-body::-webkit-scrollbar {
     width: 3px;
-    height: 3px;
+    =height: 3px;
 }
 
 .summary-body::-webkit-scrollbar-track {
@@ -287,6 +287,7 @@ function goToCheckout() {
     font-weight: 700;
     color: var(--c-azul);
     padding-top: 1rem;
+    margin-top: 1rem;
     border-top: 2px solid var(--c-rosa-light);
 }
 
