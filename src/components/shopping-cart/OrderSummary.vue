@@ -17,7 +17,7 @@ defineProps<{
     total: number
 }>()
 
-const emit = defineEmits(['empty-cart'])
+const emit = defineEmits(['empty-cart', 'checkout'])
 const showConfirmation = ref(false)
 
 watch(showConfirmation, (isShowing) => {
@@ -31,10 +31,6 @@ watch(showConfirmation, (isShowing) => {
 function confirmEmptyCart() {
     emit('empty-cart')
     showConfirmation.value = false
-}
-
-function goToCheckout() {
-    router.push('/checkout')
 }
 </script>
 
@@ -71,12 +67,13 @@ function goToCheckout() {
             </div>
 
             <div class="summary-footer">
-                <button class="checkout-button" :disabled="cartItems.length === 0" @click="goToCheckout">
+                <button class="checkout-button" :disabled="cartItems.length === 0"
+                    @click="$emit('checkout'); console.log('Desktop: Finalizar Compra clicado!')">
                     Finalizar Compra
                 </button>
             </div>
         </div>
-        <Teleport to="body">
+        <Teleport to=" body">
             <Transition name="fade">
                 <div v-if="showConfirmation" class="confirmation-modal">
                     <div class="confirmation-box">
@@ -124,7 +121,7 @@ function goToCheckout() {
 
 .summary-body::-webkit-scrollbar {
     width: 3px;
-    =height: 3px;
+    height: 3px;
 }
 
 .summary-body::-webkit-scrollbar-track {

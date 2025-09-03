@@ -7,8 +7,44 @@ import MobileCartBar from '@/components/shopping-cart/MobileCartBar.vue'
 import CheckoutProgressBar from '@/components/shopping-cart/CheckoutProgressBar.vue'
 import { faShoppingCart, faUser, faReceipt } from '@fortawesome/free-solid-svg-icons'
 import { useCartStore } from '@/stores/cart'
+import LimitModal from '@/components/modal/LimitModal.vue'
+import { useRouter } from 'vue-router'
+import MinimumOrderModal from '@/components/modal/MinimumOrderModal.vue'
 
 const cartStore = useCartStore()
+const showLimitModal = ref(false);
+const showMinimumOrderModal = ref(false);
+const MIN_QUANTITY = 80;
+const router = useRouter()
+
+function handleLimitExceeded() {
+    showLimitModal.value = true;
+}
+
+const remainingItems = computed(() => {
+    const remaining = MIN_QUANTITY - cartStore.totalCartQuantity;
+    return remaining > 0 ? remaining : 0;
+})
+
+// Na sua view principal (shopping-cart-view.vue)
+function handleCheckout() {
+    console.log('--- handleCheckout INICIADO ---');
+    console.log(`Quantidade Mínima (MIN_QUANTITY): ${MIN_QUANTITY}`);
+    console.log(`Quantidade Atual no Carrinho (cartStore.totalCartQuantity): ${cartStore.totalCartQuantity}`);
+
+    const conditionMet = cartStore.totalCartQuantity < MIN_QUANTITY;
+    console.log(`Condição (total < mínimo) é: ${conditionMet}`);
+
+    if (conditionMet) {
+        console.log('CONDIÇÃO ATENDIDA: Quantidade insuficiente. Tentando abrir o modal...');
+        showMinimumOrderModal.value = true;
+        console.log(`Valor de showMinimumOrderModal agora é: ${showMinimumOrderModal.value}`);
+    } else {
+        console.log('CONDIÇÃO NÃO ATENDIDA: Quantidade suficiente. Redirecionando para /checkout.');
+        router.push('/checkout');
+    }
+    console.log('--- handleCheckout FINALIZADO ---');
+}
 
 const checkoutSteps = [
     { name: 'Carrinho', icon: faShoppingCart },
@@ -35,20 +71,27 @@ const currentCheckoutStep = 1
                     <h2 class="category-title">{{ category.name }}</h2>
                     <div class="product-list">
                         <ProductCard v-for="product in category.products" :key="product.id" :product="product"
-                            @update:quantity="cartStore.updateQuantity" />
+                            @update:quantity="cartStore.updateQuantity" @limit-exceeded="handleLimitExceeded" />
                     </div>
                 </section>
             </main>
 
             <aside class="order-summary-desktop animate-on-load" style="animation-delay: 0.3s;">
                 <OrderSummary :cart-items="cartStore.cartItems" :total="cartStore.totalCartPrice"
-                    @empty-cart="cartStore.emptyCart" />
+                    @empty-cart="cartStore.emptyCart" @checkout="handleCheckout" />
             </aside>
         </div>
 
         <MobileCartBar :cart-items="cartStore.cartItems" :total="cartStore.totalCartPrice"
-            @empty-cart="cartStore.emptyCart" />
+            @empty-cart="cartStore.emptyCart" @checkout="handleCheckout" />
     </div>
+
+    <Teleport to="body">
+        <LimitModal :show="showLimitModal" @close="showLimitModal = false" />
+        <MinimumOrderModal :show="showMinimumOrderModal" :remaining="remainingItems"
+            @close="showMinimumOrderModal = false" />
+    </Teleport>
+
 </template>
 
 <style scoped>

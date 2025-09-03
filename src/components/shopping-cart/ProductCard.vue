@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-
+import { ref, computed } from 'vue';
+import { useCartStore } from '@/stores/cart';
 const props = defineProps<{
     product: {
         id: number
@@ -12,9 +12,23 @@ const props = defineProps<{
     }
 }>()
 
-const emit = defineEmits(['update:quantity'])
+const MAX_INDIVIDUAL_QUANTITY = 2000;
+const MAX_GLOBAL_QUANTITY = 2000;
+
+const cartStore = useCartStore();
+
+const emit = defineEmits(['update:quantity', 'limit-exceeded'])
+
+const inputWidth = computed(() => {
+    const charCount = String(props.product.quantity).length || 1;
+    return `${charCount + 1.5}ch`;
+});
 
 function increment() {
+    if (props.product.quantity >= MAX_INDIVIDUAL_QUANTITY || cartStore.totalCartQuantity >= MAX_GLOBAL_QUANTITY) {
+        emit('limit-exceeded');
+        return;
+    }
     const newQuantity = props.product.quantity + 1;
     emit('update:quantity', { productId: props.product.id, newQuantity });
 }
@@ -26,10 +40,20 @@ function decrement() {
 
 function handleInput(event: Event) {
     const target = event.target as HTMLInputElement;
-    const newQuantity = parseInt(target.value, 10) || 0;
-    emit('update:quantity', { productId: props.product.id, newQuantity });
-}
+    const sanitizedValue = target.value.replace(/\D/g, '');
+    let numericValue = sanitizedValue === '' ? 0 : parseInt(sanitizedValue, 10);
 
+    const potentialTotal = (cartStore.totalCartQuantity - props.product.quantity) + numericValue;
+
+    if (numericValue > MAX_INDIVIDUAL_QUANTITY || potentialTotal > MAX_GLOBAL_QUANTITY) {
+        emit('limit-exceeded');
+        const maxAllowedToAdd = MAX_GLOBAL_QUANTITY - (cartStore.totalCartQuantity - props.product.quantity);
+        numericValue = Math.min(numericValue, MAX_INDIVIDUAL_QUANTITY, maxAllowedToAdd);
+    }
+
+    target.value = String(numericValue);
+    emit('update:quantity', { productId: props.product.id, newQuantity: numericValue });
+}
 </script>
 
 <template>
@@ -44,8 +68,8 @@ function handleInput(event: Event) {
                 <span class="product-price">R$ {{ product.price.toFixed(2) }}</span>
                 <div class="quantity-control">
                     <button @click="decrement" class="quantity-btn" aria-label="Diminuir quantidade">-</button>
-                    <input type="number" class="quantity-input" :value="product.quantity" @input="handleInput" min="0"
-                        inputmode="numeric" pattern="[0-9]*" />
+                    <input type="text" class="quantity-input" :value="product.quantity" @input="handleInput" min="0"
+                        inputmode="numeric" pattern="[0-9]*" :style="{ width: inputWidth }" />
                     <button @click="increment" class="quantity-btn" aria-label="Aumentar quantidade">+</button>
                 </div>
             </div>
@@ -157,7 +181,8 @@ function handleInput(event: Event) {
 }
 
 .quantity-input {
-    width: 40px;
+    min-width: 40px;
+    max-width: 80px;
     text-align: center;
     border: none;
     background: transparent;
@@ -172,6 +197,7 @@ function handleInput(event: Event) {
     margin-left: 5px;
     margin-right: 5px;
     font-family: 'Fredoka', sans-serif;
+    transition: width 0.2s ease-in-out;
 }
 
 .quantity-input::-webkit-outer-spin-button,

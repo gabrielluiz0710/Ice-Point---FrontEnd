@@ -124,6 +124,10 @@ export const useCartStore = defineStore('cart', () => {
       .filter((product) => product.quantity > 0)
   })
 
+  const totalCartQuantity = computed(() => {
+    return cartItems.value.reduce((total, item) => total + item.quantity, 0)
+  })
+
   const totalCartPrice = computed(() => {
     return cartItems.value.reduce((total, item) => total + item.price * item.quantity, 0)
   })
@@ -150,6 +154,7 @@ export const useCartStore = defineStore('cart', () => {
   return {
     productCategories,
     cartItems,
+    totalCartQuantity,
     totalCartPrice,
     updateQuantity,
     emptyCart,

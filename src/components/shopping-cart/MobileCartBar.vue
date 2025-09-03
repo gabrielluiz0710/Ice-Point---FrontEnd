@@ -19,7 +19,7 @@ defineProps<{
 
 const isExpanded = ref(false)
 
-const emit = defineEmits(['empty-cart'])
+const emit = defineEmits(['empty-cart', 'checkout'])
 const showConfirmation = ref(false)
 
 watch(showConfirmation, (isShowing) => {
@@ -51,7 +51,7 @@ function goToCheckout() {
                 <div class="total-info">
                     <div class="price-details">
                         <span class="item-count">{{ cartItems.length }} {{ cartItems.length === 1 ? 'item' : 'itens'
-                        }}</span>
+                            }}</span>
                         <span class="total-price">R$ {{ total.toFixed(2) }}</span>
                     </div>
                     <button class="toggle-button" aria-label="Ver carrinho" @click.stop> Ver Carrinho
@@ -62,7 +62,9 @@ function goToCheckout() {
                 <div class="collapsed-actions">
                     <Transition name="fade-button">
                         <button v-if="!isExpanded" class="action-button" aria-label="Finalizar Compra"
-                            :disabled="cartItems.length === 0" @click.stop="goToCheckout"> Finalizar Compra
+                            :disabled="cartItems.length === 0"
+                            @click.stop="$emit('checkout'); console.log('Mobile (recolhido): Finalizar Compra clicado!')">
+                            Finalizar Compra
                         </button>
                     </Transition>
                 </div>
@@ -94,12 +96,13 @@ function goToCheckout() {
                     <p class="empty-cart-subtitle">Adicione seus sabores favoritos para vê-los aqui!</p>
                 </div>
 
-                <button class="checkout-button" :disabled="cartItems.length === 0" @click="goToCheckout">
+                <button class="checkout-button" :disabled="cartItems.length === 0"
+                    @click="$emit('checkout'); console.log('Mobile (expandido): Finalizar Compra clicado!')">
                     Finalizar Compra
                 </button>
             </div>
         </div>
-        <Teleport to="body">
+        <Teleport to=" body">
             <Transition name="fade">
                 <div v-if="showConfirmation" class="confirmation-modal">
                     <div class="confirmation-box">
