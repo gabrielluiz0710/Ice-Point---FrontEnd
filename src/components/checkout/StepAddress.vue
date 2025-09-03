@@ -131,10 +131,9 @@ const initialValues = {
     scheduleDate: checkoutStore.schedule.date,
     scheduleTime: checkoutStore.schedule.time,
     useSameAddressForDelivery:
-        checkoutStore.useSameAddressForDelivery !== null &&
-            checkoutStore.useSameAddressForDelivery !== undefined
+        (checkoutStore.useSameAddressForDelivery === true || checkoutStore.useSameAddressForDelivery === false)
             ? checkoutStore.useSameAddressForDelivery
-            : undefined,
+            : null,
 };
 
 const { setFieldValue, values, setFieldError } = useForm({
@@ -188,15 +187,20 @@ function selectDeliveryMethod(method: 'delivery' | 'pickup', setFieldValueFn: Fu
     checkoutStore.deliveryMethod = method;
 
     if (method === 'pickup') {
-        setFieldValueFn('useSameAddressForDelivery', undefined);
+        setFieldValueFn('useSameAddressForDelivery', null);
         setFieldError('useSameAddressForDelivery', undefined);
 
         deliveryAddressFormFields.value.forEach(field => {
             setFieldValueFn(field.name as FormKeys, undefined);
             setFieldError(field.name as FormKeys, undefined);
         });
+    } else if (method === 'delivery') {
+        setFieldValueFn('useSameAddressForDelivery', null);
+        setFieldError('useSameAddressForDelivery', undefined);
     }
 }
+
+
 
 function handleUseSameAddress(city: string, onChange: (value: boolean) => void) {
     if (city === 'Uberaba') {
