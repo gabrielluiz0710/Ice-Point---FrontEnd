@@ -75,9 +75,9 @@ const schema = yup.object({
     state: yup.string().required('O estado é obrigatório'),
     deliveryMethod: yup.string().required('Escolha um método'),
     useSameAddressForDelivery: yup.boolean().when('deliveryMethod', {
-        is: 'delivery', // SE o deliveryMethod for 'delivery'
-        then: schema => schema.required('Por favor, escolha onde entregar.'), // ENTÃO o campo é obrigatório
-        otherwise: schema => schema.notRequired(), // CASO CONTRÁRIO, não é obrigatório
+        is: 'delivery',
+        then: schema => schema.required('Por favor, escolha onde entregar.'),
+        otherwise: schema => schema.notRequired(),
     }),
     delivery_cep: yup.string().when('useSameAddressForDelivery', {
         is: false,
@@ -130,7 +130,11 @@ const initialValues = {
     deliveryMethod: checkoutStore.deliveryMethod,
     scheduleDate: checkoutStore.schedule.date,
     scheduleTime: checkoutStore.schedule.time,
-    useSameAddressForDelivery: checkoutStore.useSameAddressForDelivery,
+    useSameAddressForDelivery:
+        checkoutStore.useSameAddressForDelivery !== null &&
+            checkoutStore.useSameAddressForDelivery !== undefined
+            ? checkoutStore.useSameAddressForDelivery
+            : undefined,
 };
 
 const { setFieldValue, values, setFieldError } = useForm({
@@ -757,7 +761,7 @@ function getRef(field: { name: string }) {
     font-family: 'Fredoka', sans-serif;
     border: 2px solid var(--color-border);
     border-radius: 12px;
-    background-color: var(--color-background-soft);
+    background-color: var(--c-branco);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -842,7 +846,7 @@ function getRef(field: { name: string }) {
     border: 2px solid var(--color-border);
     font-family: 'Fredoka', sans-serif;
     font-size: 1rem;
-    background-color: var(--color-background-soft);
+    background-color: var(--c-branco);
     transition: border-color .2s, box-shadow .2s;
     width: 100%
 }

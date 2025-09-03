@@ -123,7 +123,7 @@ function finalizeOrder(formValues: any) {
     font-family: 'Fredoka', sans-serif;
     border: 2px solid var(--color-border);
     border-radius: 12px;
-    background-color: var(--color-background-soft);
+    background-color: var(--c-branco);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -197,11 +197,12 @@ function finalizeOrder(formValues: any) {
     display: inline-block;
     width: 24px;
     height: 24px;
-    background-color: var(--color-background-soft);
+    background-color: var(--c-text-light);
     border: 2px solid var(--color-border);
     border-radius: 6px;
     margin-right: 0.75rem;
     transition: all 0.2s ease;
+    color: var(--c-text-dark);
 }
 
 .checkbox-label input[type="checkbox"]:checked+.checkbox-custom {

@@ -210,10 +210,11 @@ onMounted(() => {
     display: flex;
     justify-content: center;
     gap: 2rem;
-    background-color: var(--color-background-soft);
+    background-color: var(--c-cinza-light);
     padding: 1rem;
     border-radius: 12px;
     margin-bottom: 2.5rem;
+    border: 1px solid var(--color-border);
 }
 
 .meta-item {
@@ -249,7 +250,7 @@ onMounted(() => {
 }
 
 .detail-box {
-    background: #f8f9fa;
+    background: var(--c-cinza-light);
     padding: 1.5rem;
     border-radius: 16px;
     border: 1px solid var(--color-border);
@@ -273,6 +274,7 @@ onMounted(() => {
 
 .order-summary {
     grid-column: 1 / -1;
+    color: var(--c-text-dark);
 }
 
 .order-summary ul {

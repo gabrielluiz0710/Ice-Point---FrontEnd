@@ -182,7 +182,7 @@ onMounted(() => {
                                         <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
                                         <div class="address-line-group">
                                             <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
-                                            }}</span>
+                                                }}</span>
                                             <span>CEP: {{ checkoutStore.address.cep }}</span>
                                         </div>
                                     </template>
@@ -209,11 +209,11 @@ onMounted(() => {
                                         checkoutStore.address.number }}</p>
                                     <p v-if="checkoutStore.address.complement" class="address-line complement">{{
                                         checkoutStore.address.complement
-                                    }}</p>
+                                        }}</p>
                                     <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
                                     <div class="address-line-group">
                                         <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
-                                        }}</span>
+                                            }}</span>
                                         <span>CEP: {{ checkoutStore.address.cep }}</span>
                                     </div>
                                 </div>
@@ -323,15 +323,15 @@ onMounted(() => {
 .section-summary-display {
     padding: 2rem;
     display: flex;
-    /* Mude de 'grid' para 'flex' */
     flex-direction: column;
-    /* Adicione esta linha */
     gap: 1.5rem;
-    /* Mude de '1rem' para '1.5rem' */
     font-size: 0.95rem;
 }
 
-/* ADICIONE ESTE BLOCO DE ESTILOS NO FINAL */
+.section-summary-display p {
+    color: var(--c-text-dark);
+}
+
 .summary-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
