@@ -53,24 +53,28 @@ function goToCheckout() {
                 <font-awesome-icon :icon="faTrashCan" />
                 Esvaziar carrinho
             </button>
-            <TransitionGroup name="list" tag="ul" class="summary-list">
-                <li v-for="item in cartItems" :key="item.id" class="summary-item">
-                    <div class="item-info">
-                        <span class="item-name">{{ item.name }}</span>
-                        <span class="item-details">{{ item.quantity }} x R$ {{ item.price.toFixed(2) }}</span>
-                    </div>
-                    <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
-                </li>
-            </TransitionGroup>
+            <div class="summary-body">
+                <TransitionGroup name="list" tag="ul" class="summary-list">
+                    <li v-for="item in cartItems" :key="item.id" class="summary-item">
+                        <div class="item-info">
+                            <span class="item-name">{{ item.name }}</span>
+                            <span class="item-details">{{ item.quantity }} x R$ {{ item.price.toFixed(2) }}</span>
+                        </div>
+                        <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
+                    </li>
+                </TransitionGroup>
+            </div>
 
             <div class="summary-total">
                 <span>Total</span>
                 <span>R$ {{ total.toFixed(2) }}</span>
             </div>
 
-            <button class="checkout-button" :disabled="cartItems.length === 0" @click="goToCheckout">
-                Finalizar Compra
-            </button>
+            <div class="summary-footer">
+                <button class="checkout-button" :disabled="cartItems.length === 0" @click="goToCheckout">
+                    Finalizar Compra
+                </button>
+            </div>
         </div>
         <Teleport to="body">
             <Transition name="fade">
@@ -91,20 +95,87 @@ function goToCheckout() {
 
 <style scoped>
 .order-summary {
-    background-color: var(--color-background-soft);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--c-branco);
     padding: 2rem;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
     border: 1px solid var(--color-border);
     position: relative;
+
+    max-height: calc(100vh - 4rem);
     overflow: hidden;
+    box-sizing: border-box;
 }
+
+.summary-body {
+    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-right: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.summary-body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-rosa) rgba(0, 0, 0, 0.04);
+}
+
+.summary-body::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+}
+
+.summary-body::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 999px;
+    margin: 4px 0;
+}
+
+.summary-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--c-rosa), var(--c-rosa-dark));
+    border-radius: 999px;
+    min-height: 24px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: filter .15s ease, transform .12s ease;
+}
+
+.summary-body::-webkit-scrollbar-thumb:hover {
+    filter: brightness(0.92);
+    transform: scaleX(1.02);
+}
+
+.summary-body::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+.summary-footer {
+    flex: 0 0 auto;
+    margin-top: 1rem;
+    background: transparent;
+    z-index: 1;
+}
+
+
+.summary-footer .checkout-button {
+    width: 100%;
+}
+
+.summary-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
 
 .summary-title {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--c-text-dark);
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     text-align: center;
     position: relative;
     padding-bottom: 0.75rem;
@@ -138,7 +209,7 @@ function goToCheckout() {
     font-family: 'Fredoka', sans-serif;
     font-size: 0.85rem;
     cursor: pointer;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto 1rem;
     padding: 0.25rem 0.5rem;
     border-radius: 6px;
     transition: all 0.2s ease;
@@ -216,7 +287,6 @@ function goToCheckout() {
     font-weight: 700;
     color: var(--c-azul);
     padding-top: 1rem;
-    margin-top: 1rem;
     border-top: 2px solid var(--c-rosa-light);
 }
 

@@ -44,26 +44,34 @@ const schema = yup.object({
         .required('A data é obrigatória')
         .matches(/^(\d{2}\/\d{2}\/\d{4})$/, 'Data no formato DD/MM/AAAA')
         .test('isValidDate', 'A data informada é inválida', (value) => {
-            if (!value) return true
-            const parts = value.split('/')
-            if (parts.length !== 3) return false
-            const day = parseInt(parts[0], 10)
-            const month = parseInt(parts[1], 10)
-            const year = parseInt(parts[2], 10)
-            if (isNaN(day) || isNaN(month) || isNaN(year)) return false
-            if (month < 1 || month > 12) return false
-            const date = new Date(year, month - 1, day)
-            return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+            if (!value) return false;
+            const parts = value.split('/');
+            if (parts.length !== 3) return false;
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const year = parseInt(parts[2], 10);
+            if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+            const date = new Date(year, month - 1, day);
+            return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
         })
         .test('isNotTooOld', 'Verifique o ano de nascimento', (value) => {
-            if (!value) return true
-            const [day, month, year] = value.split('/').map(Number)
-            const birthDate = new Date(year, month - 1, day)
-            const today = new Date()
-            const maxAgeDate = new Date()
-            maxAgeDate.setFullYear(today.getFullYear() - 150)
-            return birthDate >= maxAgeDate && birthDate < today
+            if (!value) return false;
+            const [day, month, year] = value.split('/').map(Number);
+            const birthDate = new Date(year, month - 1, day);
+            const today = new Date();
+            const maxAgeDate = new Date();
+            maxAgeDate.setFullYear(today.getFullYear() - 150);
+            return birthDate >= maxAgeDate && birthDate < today;
         })
+        .test('isAdult', 'Você deve ter 18 anos ou mais', (value) => {
+            if (!value) return false;
+            const [day, month, year] = value.split('/').map(Number);
+            const birthDate = new Date(year, month - 1, day);
+            const today = new Date();
+            const adultCutoff = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+            return birthDate <= adultCutoff;
+        })
+
 });
 
 const formFields: FormField[] = [
@@ -132,7 +140,8 @@ function onSubmit(values: any) {
 </script>
 
 <template>
-    <Form @submit="onSubmit" :validation-schema="schema" :initial-values="checkoutStore.personalData" v-slot="{ meta }">
+    <Form @submit="onSubmit" :validation-schema="schema" :initial-values="checkoutStore.personalData"
+        :validate-on-input="true" v-slot="{ meta }">
         <div class="form-grid">
             <div v-for="(fieldData, index) in formFields" :key="fieldData.name" class="form-field"
                 :style="{ animationDelay: `${index * 80}ms` }">

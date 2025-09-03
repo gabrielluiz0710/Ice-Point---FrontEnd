@@ -162,7 +162,6 @@ const checkoutStore = useCheckoutStore()
 
 .summary-line.discount {
     color: #28a745;
-    /* Um verde agradável para sucesso/desconto */
 }
 
 .summary-line.discount span:first-child {

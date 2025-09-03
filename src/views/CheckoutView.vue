@@ -182,7 +182,7 @@ onMounted(() => {
                                         <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
                                         <div class="address-line-group">
                                             <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
-                                                }}</span>
+                                            }}</span>
                                             <span>CEP: {{ checkoutStore.address.cep }}</span>
                                         </div>
                                     </template>
@@ -209,11 +209,11 @@ onMounted(() => {
                                         checkoutStore.address.number }}</p>
                                     <p v-if="checkoutStore.address.complement" class="address-line complement">{{
                                         checkoutStore.address.complement
-                                        }}</p>
+                                    }}</p>
                                     <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
                                     <div class="address-line-group">
                                         <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
-                                            }}</span>
+                                        }}</span>
                                         <span>CEP: {{ checkoutStore.address.cep }}</span>
                                     </div>
                                 </div>
@@ -246,8 +246,9 @@ onMounted(() => {
 
 <style scoped>
 .checkout-view {
+    background-color: var(--c-branco);
     max-width: 1200px;
-    margin: 2rem auto;
+    margin: 2rem auto auto auto;
     padding: 1rem 1rem 0 1rem;
     font-family: 'Fredoka', sans-serif;
 }
