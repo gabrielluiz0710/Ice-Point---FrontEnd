@@ -26,24 +26,15 @@ const remainingItems = computed(() => {
     return remaining > 0 ? remaining : 0;
 })
 
-// Na sua view principal (shopping-cart-view.vue)
 function handleCheckout() {
-    console.log('--- handleCheckout INICIADO ---');
-    console.log(`Quantidade Mínima (MIN_QUANTITY): ${MIN_QUANTITY}`);
-    console.log(`Quantidade Atual no Carrinho (cartStore.totalCartQuantity): ${cartStore.totalCartQuantity}`);
 
     const conditionMet = cartStore.totalCartQuantity < MIN_QUANTITY;
-    console.log(`Condição (total < mínimo) é: ${conditionMet}`);
 
     if (conditionMet) {
-        console.log('CONDIÇÃO ATENDIDA: Quantidade insuficiente. Tentando abrir o modal...');
         showMinimumOrderModal.value = true;
-        console.log(`Valor de showMinimumOrderModal agora é: ${showMinimumOrderModal.value}`);
     } else {
-        console.log('CONDIÇÃO NÃO ATENDIDA: Quantidade suficiente. Redirecionando para /checkout.');
         router.push('/checkout');
     }
-    console.log('--- handleCheckout FINALIZADO ---');
 }
 
 const checkoutSteps = [

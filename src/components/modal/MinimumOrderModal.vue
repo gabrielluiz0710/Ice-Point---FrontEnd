@@ -4,7 +4,7 @@ import { faIceCream, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 defineProps<{
     show: boolean,
-    remaining: number // Quantidade que falta para atingir o mínimo
+    remaining: number
 }>();
 const emit = defineEmits(['close']);
 </script>
@@ -46,7 +46,6 @@ const emit = defineEmits(['close']);
 </template>
 
 <style scoped>
-/* Importando estilos do outro modal para manter a consistência, com algumas alterações */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);

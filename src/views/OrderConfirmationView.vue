@@ -11,6 +11,10 @@ const checkoutStore = useCheckoutStore()
 const cartStore = useCartStore()
 const router = useRouter()
 
+const finalGrandTotal = checkoutStore.grandTotal;
+const finalDeliveryFee = checkoutStore.deliveryFee;
+const finalDiscount = checkoutStore.discount;
+
 const checkoutSteps = [
     { name: 'Carrinho', icon: faShoppingCart },
     { name: 'Dados & Pagamento', icon: faUser },
@@ -87,7 +91,7 @@ onMounted(() => {
                         v-if="!checkoutStore.useSameAddressForDelivery && checkoutStore.deliveryMethod === 'delivery'">
                         <p>{{ checkoutStore.deliveryAddress.street }}, {{ checkoutStore.deliveryAddress.number }}</p>
                         <p v-if="checkoutStore.deliveryAddress.complement">{{ checkoutStore.deliveryAddress.complement
-                        }}</p>
+                            }}</p>
                         <p>{{ checkoutStore.deliveryAddress.neighborhood }}, {{ checkoutStore.deliveryAddress.city }} -
                             {{
                                 checkoutStore.deliveryAddress.state }}</p>
@@ -113,15 +117,15 @@ onMounted(() => {
                     </ul>
                     <div class="total-line">
                         <span>Taxa de Entrega</span>
-                        <strong>R$ {{ checkoutStore.deliveryFee.toFixed(2).replace('.', ',') }}</strong>
+                        <strong>R$ {{ finalDeliveryFee.toFixed(2).replace('.', ',') }}</strong>
                     </div>
-                    <div v-if="checkoutStore.discount > 0" class="total-line discount">
+                    <div v-if="finalDiscount > 0" class="total-line discount">
                         <span>Desconto</span>
-                        <strong>- R$ {{ checkoutStore.discount.toFixed(2).replace('.', ',') }}</strong>
+                        <strong>- R$ {{ finalDiscount.toFixed(2).replace('.', ',') }}</strong>
                     </div>
                     <div class="grand-total">
                         <span>Total</span>
-                        <strong>R$ {{ checkoutStore.grandTotal.toFixed(2).replace('.', ',') }}</strong>
+                        <strong>R$ {{ finalGrandTotal.toFixed(2).replace('.', ',') }}</strong>
                     </div>
                 </div>
             </div>
