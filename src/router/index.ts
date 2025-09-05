@@ -4,6 +4,8 @@ import SaboresView from '../views/Sabores.vue'
 import ShoppingCartView from '../views/ShoppingCartView.vue'
 import CheckoutView from '../views/CheckoutView.vue'
 import OrderConfirmationView from '../views/OrderConfirmationView.vue'
+import AboutUsView from '../views/AboutUsView.vue'
+import LocalizationView from '../views/LocalizationView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,6 +29,16 @@ const router = createRouter({
       path: '/pedido-confirmado',
       name: 'OrderConfirmation',
       component: OrderConfirmationView,
+    },
+    {
+      path: '/sobre',
+      name: 'sobre',
+      component: AboutUsView,
+    },
+    {
+      path: '/localizacao',
+      name: 'localizacao',
+      component: LocalizationView,
     },
     {
       path: '/sabores',

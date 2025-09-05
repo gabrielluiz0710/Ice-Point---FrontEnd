@@ -1,11 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue';
 import { RouterLink } from 'vue-router';
-
+import { faShoppingCart, faUser } from '@fortawesome/free-solid-svg-icons';
 const isSidebarOpen = ref(false);
 
 const navigationHeaderRef = ref<HTMLElement | null>(null);
 const sidebarToggleButtonRef = ref<HTMLElement | null>(null);
+const lastScrollY = ref(0);
+const isHeaderVisible = ref(true);
+
+const handleScroll = () => {
+    const currentScrollY = window.scrollY;
+
+    if (currentScrollY <= 0) {
+        isHeaderVisible.value = true;
+        return;
+    }
+
+    if (currentScrollY < lastScrollY.value) {
+        isHeaderVisible.value = true;
+    } else {
+        isHeaderVisible.value = false;
+    }
+
+    lastScrollY.value = currentScrollY;
+};
 
 const closeSidebar = () => {
     isSidebarOpen.value = false;
@@ -35,20 +54,26 @@ const handleClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
     document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll);
+
 });
 
 onUnmounted(() => {
     document.removeEventListener('mousedown', handleClickOutside);
 });
+
+onBeforeUnmount(() => {
+    window.removeEventListener('scroll', handleScroll);
+});
 </script>
 
 <template>
-    <header class="header">
-        <button ref="sidebarToggleButtonRef" @click="toggleSidebar" class="btn-icon-header" aria-label="Abrir menu">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                <path fill-rule="evenodd"
-                    d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" />
-            </svg>
+    <header class="header" :class="{ 'header--hidden': !isHeaderVisible }">
+        <button ref="sidebarToggleButtonRef" @click="toggleSidebar" class="btn-icon-header hamburger-btn"
+            :class="{ 'is-active': isSidebarOpen }" aria-label="Abrir menu">
+            <div class="hamburger-box">
+                <div class="hamburger-inner"></div>
+            </div>
         </button>
 
         <div class="logo-container">
@@ -57,28 +82,58 @@ onUnmounted(() => {
             </RouterLink>
         </div>
 
-        <nav ref="navigationHeaderRef" class="navigation-header" :class="{ 'active': isSidebarOpen }">
-            <button @click="closeSidebar" class="btn-icon-header close-btn" aria-label="Fechar menu">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
-                    <path
-                        d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708" />
-                </svg>
-            </button>
+        <div class="header-right-content">
+            <nav class="navigation-header-desktop">
+                <RouterLink to="/sobre">Sobre Nós</RouterLink>
+                <RouterLink to="/produtos">Produtos</RouterLink>
+                <RouterLink to="/localizacao">Localização</RouterLink>
+                <RouterLink to="/contatos">Contato</RouterLink>
+                <RouterLink to="/carrinho">
+                    <font-awesome-icon :icon="faShoppingCart" />
+                    <span>Montar Carrinho</span>
+                </RouterLink>
+                <RouterLink to="/perfil">
+                    <font-awesome-icon :icon="faUser" />
+                    <span>Meu Perfil</span>
+                </RouterLink>
+            </nav>
 
+            <div class="social-icons-desktop">
+                <a href="https://wa.me/5534999658035" target="_blank" aria-label="WhatsApp">
+                    <font-awesome-icon icon="fa-brands fa-whatsapp" size="lg" />
+                </a>
+                <a href="https://instagram.com/icepointuberaba" target="_blank" aria-label="Instagram">
+                    <font-awesome-icon icon="fa-brands fa-instagram" size="lg" />
+                </a>
+            </div>
+        </div>
+
+        <nav ref="navigationHeaderRef" class="navigation-header-mobile" :class="{ 'active': isSidebarOpen }">
+            <button @click="closeSidebar" class="btn-icon-header close-btn" aria-label="Fechar menu">
+                <font-awesome-icon icon="fa-solid fa-times" />
+            </button>
             <RouterLink to="/sobre" @click="closeSidebar">Sobre Nós</RouterLink>
             <RouterLink to="/produtos" @click="closeSidebar">Produtos</RouterLink>
             <RouterLink to="/localizacao" @click="closeSidebar">Localização</RouterLink>
             <RouterLink to="/contatos" @click="closeSidebar">Contato</RouterLink>
 
+            <div class="mobile-actions">
+                <RouterLink to="/carrinho" class="action-btn-mobile" @click="closeSidebar">
+                    <font-awesome-icon :icon="faShoppingCart" />
+                    <span>Montar Carrinho</span>
+                </RouterLink>
+                <RouterLink to="/perfil" class="action-btn-mobile" @click="closeSidebar">
+                    <font-awesome-icon :icon="faUser" />
+                    <span>Meu Perfil</span>
+                </RouterLink>
+            </div>
+
             <div class="social-icons">
-                <a href="#" target="_blank" aria-label="WhatsApp">
+                <a href="https://wa.me/5534999658035" target="_blank" aria-label="WhatsApp">
                     <font-awesome-icon icon="fa-brands fa-whatsapp" size="lg" />
                 </a>
-                <a href="#" target="_blank" aria-label="Instagram">
+                <a href="https://instagram.com/icepointuberaba" target="_blank" aria-label="Instagram">
                     <font-awesome-icon icon="fa-brands fa-instagram" size="lg" />
-                </a>
-                <a href="#" target="_blank" aria-label="Facebook">
-                    <font-awesome-icon icon="fa-brands fa-facebook" size="lg" />
                 </a>
             </div>
         </nav>
@@ -103,34 +158,54 @@ onUnmounted(() => {
     box-shadow: 0 4px 15px rgba(100, 50, 50, 0.15);
 }
 
+.logo-container {
+    flex-shrink: 0;
+}
+
 .logo-img {
     width: 140px;
     height: auto;
     transition: transform 0.3s ease;
+    display: block;
 }
 
 .logo-img:hover {
     transform: scale(1.1);
 }
 
-.navigation-header {
+.header-right-content {
     display: flex;
     align-items: center;
     gap: 2.5rem;
 }
 
-.navigation-header a {
+.navigation-header-desktop {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+}
+
+.navigation-header-desktop a span {
+    font-weight: 500;
+}
+
+
+.navigation-header-desktop a,
+.social-icons-desktop a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     text-decoration: none;
     color: var(--c-branco);
     font-weight: 500;
     font-size: 1.1rem;
     position: relative;
     transition: transform 0.3s ease-out;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
+    padding-bottom: 5px;
 }
 
-.navigation-header a::after {
+.navigation-header-desktop a::after,
+.social-icons-desktop a::after {
     content: '';
     position: absolute;
     width: 0%;
@@ -143,77 +218,149 @@ onUnmounted(() => {
     transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.navigation-header a:hover {
-    color: var(--c-branco);
+.navigation-header-desktop a:hover,
+.social-icons-desktop a:hover {
     transform: translateY(-2px);
 }
 
-.navigation-header a:hover::after {
+.navigation-header-desktop a:hover::after,
+.social-icons-desktop a:hover::after {
     width: 100%;
 }
 
-.btn-icon-header {
-    background: transparent;
-    border: none;
-    color: var(--c-branco);
-    cursor: pointer;
-    display: none;
-    padding: 5px;
-    border-radius: 50%;
-    transition: all 0.3s ease;
+.social-icons-desktop a {
+    font-size: 1.4rem;
 }
 
-.btn-icon-header:hover {
-    transform: scale(1.1);
-}
-
-.close-btn:hover {
-    transform: scale(1.2) rotate(180deg);
-}
-
-.social-icons {
+.social-icons-desktop {
     display: flex;
-    gap: 1.5rem;
-    margin-left: 2rem;
+    gap: 1rem;
 }
 
-.social-icons a {
+.social-icons-desktop a {
     color: var(--c-branco);
+    font-size: 1.4rem;
     transition: all 0.3s ease;
+    display: inline-block;
 }
 
-.social-icons a:hover {
-    color: var(--c-branco);
-    transform: scale(1.3) translateY(-3px);
+.social-icons-desktop a:hover {
+    transform: scale(1.2) translateY(-2px);
+    color: var(--c-azul-light);
 }
 
-@keyframes pulse {
+.btn-icon-header,
+.navigation-header-mobile {
+    display: none;
+}
 
-    0%,
-    100% {
-        transform: scale(1);
+@media (max-width: 1280px) and (min-width: 993px) {
+
+    .navigation-header-desktop a[href="/carrinho"] span,
+    .navigation-header-desktop a[href="/perfil"] span {
+        display: none;
     }
 
-    50% {
-        transform: scale(1.05);
+    .navigation-header-desktop a[href="/carrinho"],
+    .navigation-header-desktop a[href="/perfil"] {
+        font-size: 1.4rem;
     }
 }
 
-@keyframes swing-in {
-    from {
-        transform: rotateY(90deg) translateX(50px);
-        opacity: 0;
-    }
-
-    to {
-        transform: rotateY(0) translateX(0);
-        opacity: 1;
-    }
-}
 
 @media (max-width: 992px) {
     .btn-icon-header {
+        background: transparent;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        z-index: 1002;
+    }
+
+    .hamburger-box {
+        width: 28px;
+        height: 24px;
+        position: relative;
+    }
+
+    .hamburger-inner {
         display: block;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .hamburger-inner,
+    .hamburger-inner::before,
+    .hamburger-inner::after {
+        width: 100%;
+        height: 3px;
+        background-color: var(--c-branco);
+        border-radius: 4px;
+        position: absolute;
+        transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
+    }
+
+    .hamburger-inner::before,
+    .hamburger-inner::after {
+        content: "";
+        display: block;
+    }
+
+    .hamburger-inner::before {
+        top: -10px;
+    }
+
+    .hamburger-inner::after {
+        bottom: -10px;
+    }
+
+    .hamburger-btn.is-active .hamburger-inner {
+        transform: translateY(-50%) rotate(45deg);
+    }
+
+    .hamburger-btn.is-active .hamburger-inner::before {
+        transform: rotate(0) translateY(10px);
+        opacity: 0;
+    }
+
+    .hamburger-btn.is-active .hamburger-inner::after {
+        transform: translateY(-10px) rotate(-90deg);
+    }
+
+    .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: var(--c-branco);
+        font-size: 2rem;
+        transition: transform 0.3s ease;
+    }
+
+    .close-btn:hover {
+        transform: rotate(90deg);
+    }
+
+    .header {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .header--hidden {
+        transform: translateY(-100%);
+    }
+
+    .header-right-content {
+        display: none;
+    }
+
+    .hamburger-btn {
+        display: block;
+        position: absolute;
+        left: 5%;
+        top: 50%;
+        transform: translateY(-50%);
         z-index: 1002;
     }
 
@@ -223,7 +370,8 @@ onUnmounted(() => {
         transform: translateX(-50%);
     }
 
-    .navigation-header {
+    .navigation-header-mobile {
+        display: flex;
         position: fixed;
         top: 0;
         left: 0;
@@ -241,39 +389,94 @@ onUnmounted(() => {
         transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
     }
 
-    .navigation-header.active {
+    .navigation-header-mobile.active {
         transform: translateX(0);
     }
 
-    .navigation-header.active a {
-        animation: swing-in 0.5s backwards;
-    }
-
-    .navigation-header.active a:nth-child(2) {
-        animation-delay: 0.1s;
-    }
-
-    .navigation-header.active a:nth-child(3) {
-        animation-delay: 0.2s;
-    }
-
-    .navigation-header.active a:nth-child(4) {
-        animation-delay: 0.3s;
-    }
-
-    .navigation-header.active a:nth-child(5) {
-        animation-delay: 0.4s;
+    .navigation-header-mobile a:not(.action-btn-mobile) {
+        font-size: 1.5rem;
+        color: var(--c-branco);
+        text-decoration: none;
     }
 
     .close-btn {
+        display: block;
         position: absolute;
         top: 20px;
         right: 20px;
     }
 
+    .close-btn:hover {
+        transform: scale(1.2) rotate(180deg);
+    }
+
+    .mobile-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+        padding-top: 1.5rem;
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    .action-btn-mobile {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: var(--c-branco);
+        text-decoration: none;
+        font-size: 1.2rem;
+        padding: 0.5rem 0;
+    }
+
     .social-icons {
-        margin-top: 2rem;
-        margin-left: 0;
+        display: flex;
+        position: absolute;
+        bottom: 2rem;
+        left: 2rem;
+        gap: 2rem;
+    }
+
+    .social-icons a {
+        color: var(--c-branco);
+        transition: all 0.3s ease;
+    }
+
+    @keyframes swing-in {
+        from {
+            transform: rotateY(90deg) translateX(50px);
+            opacity: 0;
+        }
+
+        to {
+            transform: rotateY(0) translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .navigation-header-mobile.active>* {
+        animation: swing-in 0.5s backwards;
+    }
+
+    .navigation-header-mobile.active a:nth-of-type(1) {
+        animation-delay: 0.1s;
+    }
+
+    .navigation-header-mobile.active a:nth-of-type(2) {
+        animation-delay: 0.2s;
+    }
+
+    .navigation-header-mobile.active a:nth-of-type(3) {
+        animation-delay: 0.3s;
+    }
+
+    .navigation-header-mobile.active a:nth-of-type(4) {
+        animation-delay: 0.4s;
+    }
+
+    .navigation-header-mobile.active .mobile-actions {
+        animation-delay: 0.5s;
     }
 }
 

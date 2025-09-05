@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { Ref } from 'vue'
 import ProductCard from '@/components/shopping-cart/ProductCard.vue'
 import OrderSummary from '@/components/shopping-cart/OrderSummary.vue'
@@ -43,12 +43,16 @@ const checkoutSteps = [
     { name: 'Confirmação', icon: faReceipt }
 ]
 const currentCheckoutStep = 1
+
+onMounted(() => {
+    window.scrollTo(0, 0);
+});
 </script>
 
 <template>
     <div class="shopping-cart-view">
         <header class="cart-header animate-on-load">
-            <h1>Monte seu Pedido</h1>
+            <h1>Monte seu Carrinho para Festa</h1>
             <p>Escolha seus produtos favoritos e adicione ao carrinho!</p>
         </header>
 
