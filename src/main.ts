@@ -22,6 +22,7 @@ import {
   faUser,
   faCreditCard,
   faReceipt,
+  faClock,
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
@@ -50,6 +51,7 @@ library.add(
   faUser,
   faCreditCard,
   faReceipt,
+  faClock,
 )
 
 const app = createApp(App)

@@ -129,7 +129,7 @@ onUnmounted(() => {
     justify-content: center;
     text-align: center;
     padding: 8rem 2rem;
-    background: linear-gradient(var(--c-azul), var(--c-azul-dark)), url('@/assets/images/sobre/background.jpg') no-repeat center center;
+    background: linear-gradient(var(--c-azul), var(--c-azul-dark)), no-repeat center center;
     background-size: cover;
     color: var(--c-branco, #fff);
 }
