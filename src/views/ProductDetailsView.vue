@@ -468,6 +468,7 @@ function endPan() {
 .secao-abas {
     margin-top: 40px;
     font-family: 'Fredoka', sans-serif;
+    color: var(--c-text-dark);
 }
 
 .abas-botoes {
@@ -519,6 +520,7 @@ function endPan() {
 .info-nutricional ul {
     list-style: none;
     padding: 0;
+    color: var(--c-text-dark);
 }
 
 .info-nutricional li {
@@ -526,6 +528,7 @@ function endPan() {
     justify-content: space-between;
     padding: 5px 0;
     border-bottom: 1px dashed #eee;
+    color: var(--c-text-dark);
 }
 
 .lightbox-overlay {
