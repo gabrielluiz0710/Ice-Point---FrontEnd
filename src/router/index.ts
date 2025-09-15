@@ -50,7 +50,7 @@ const router = createRouter({
     {
       path: '/produtos',
       name: 'produtos',
-      component: () => ProductsView,
+      component: ProductsView,
     },
     {
       path: '/produtos/:id',

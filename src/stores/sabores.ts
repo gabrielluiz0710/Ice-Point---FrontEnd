@@ -11,8 +11,8 @@ export const products = ref([
     description:
       'A energia do açaí em forma de picolé! Uma combinação cremosa e irresistível que une o sabor marcante do açaí da Amazônia com a suavidade do leite, criando uma experiência única e deliciosa.',
     type: 'image',
-    src: '/sabores/images/picole-leite/acai.png',
-    images: ['/sabores/images/picole-leite/acai.png'],
+    src: '/images/picole-leite/acai.png',
+    images: ['/images/picole-leite/acai.png'],
     ingredients: [
       'Polpa de açaí',
       'Água',
@@ -38,8 +38,8 @@ export const products = ref([
     description:
       'A combinação perfeita entre a acidez do abacaxi e a doçura cremosa do leite condensado. Um picolé refrescante com um toque especial de sobremesa.',
     type: 'image',
-    src: '/sabores/images/picole-leite/abacaxisuico.png',
-    images: ['/sabores/images/picole-leite/abacaxisuico.png'],
+    src: '/images/picole-leite/abacaxisuico.png',
+    images: ['/images/picole-leite/abacaxisuico.png'],
     ingredients: [
       'Água',
       'Leite condensado',
@@ -65,8 +65,8 @@ export const products = ref([
     description:
       'O sabor clássico da ameixa em uma versão cremosa e refrescante. Um picolé que equilibra o doce da fruta com a suavidade do leite.',
     type: 'image',
-    src: '/sabores/images/picole-leite/ameixa.png',
-    images: ['/sabores/images/picole-leite/ameixa.png'],
+    src: '/images/picole-leite/ameixa.png',
+    images: ['/images/picole-leite/ameixa.png'],
     ingredients: ['Água', 'Leite em pó', 'Açúcar', 'Polpa de ameixa', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -85,8 +85,8 @@ export const products = ref([
     description:
       'Intenso e cremoso! Feito com pasta de amendoim de verdade, é a escolha perfeita para quem ama essa leguminosa. Uma explosão de sabor a cada mordida.',
     type: 'image',
-    src: '/sabores/images/picole-leite/amendoim.png',
-    images: ['/sabores/images/picole-leite/amendoim.png'],
+    src: '/images/picole-leite/amendoim.png',
+    images: ['/images/picole-leite/amendoim.png'],
     ingredients: ['Leite', 'Açúcar', 'Pasta de amendoim', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -105,8 +105,8 @@ export const products = ref([
     description:
       'A doçura natural da banana combinada com a cremosidade do leite. Um sabor que remete à infância, perfeito para um lanche delicioso e nutritivo.',
     type: 'image',
-    src: '/sabores/images/picole-leite/banana.png',
-    images: ['/sabores/images/picole-leite/banana.png'],
+    src: '/images/picole-leite/banana.png',
+    images: ['/images/picole-leite/banana.png'],
     ingredients: ['Leite', 'Polpa de banana', 'Açúcar', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -125,8 +125,8 @@ export const products = ref([
     description:
       'A cor vibrante e o sabor inconfundível de tutti-frutti que a criançada adora. Uma viagem divertida e refrescante a cada mordida.',
     type: 'image',
-    src: '/sabores/images/picole-leite/blueice.png',
-    images: ['/sabores/images/picole-leite/blueice.png'],
+    src: '/images/picole-leite/blueice.png',
+    images: ['/images/picole-leite/blueice.png'],
     ingredients: [
       'Água',
       'Açúcar',
@@ -152,8 +152,8 @@ export const products = ref([
     description:
       'O clássico que nunca erra. Um picolé super cremoso com o sabor intenso do chocolate, perfeito para os chocólatras de plantão.',
     type: 'image',
-    src: '/sabores/images/picole-leite/chocolate.png',
-    images: ['/sabores/images/picole-leite/chocolate.png'],
+    src: '/images/picole-leite/chocolate.png',
+    images: ['/images/picole-leite/chocolate.png'],
     ingredients: [
       'Leite',
       'Açúcar',
@@ -179,8 +179,8 @@ export const products = ref([
     description:
       'A cremosidade do leite com pedacinhos de coco ralado. Um picolé que te transporta para uma praia tropical a cada mordida.',
     type: 'image',
-    src: '/sabores/images/picole-leite/coco.png',
-    images: ['/sabores/images/picole-leite/coco.png'],
+    src: '/images/picole-leite/coco.png',
+    images: ['/images/picole-leite/coco.png'],
     ingredients: [
       'Leite',
       'Açúcar',
@@ -206,8 +206,8 @@ export const products = ref([
     description:
       'O sabor irresistível do coco queimado em uma versão gelada e cremosa. Uma sobremesa tradicional brasileira no palito.',
     type: 'image',
-    src: '/sabores/images/picole-leite/cocoqueimado.png',
-    images: ['/sabores/images/picole-leite/cocoqueimado.png'],
+    src: '/images/picole-leite/cocoqueimado.png',
+    images: ['/images/picole-leite/cocoqueimado.png'],
     ingredients: ['Leite', 'Açúcar', 'Coco queimado ralado', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -226,8 +226,8 @@ export const products = ref([
     description:
       'A simplicidade e a sofisticação do sabor de creme baunilha. Um picolé suave, cremoso e que agrada a todos os paladares.',
     type: 'image',
-    src: '/sabores/images/picole-leite/creme.png',
-    images: ['/sabores/images/picole-leite/creme.png'],
+    src: '/images/picole-leite/creme.png',
+    images: ['/images/picole-leite/creme.png'],
     ingredients: ['Leite', 'Creme de leite', 'Açúcar', 'Extrato de baunilha', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -246,8 +246,8 @@ export const products = ref([
     description:
       'O sabor exótico e inconfundível do cupuaçu da Amazônia em um picolé cremoso. Uma experiência única que combina acidez e doçura na medida certa.',
     type: 'image',
-    src: '/sabores/images/picole-leite/cupuacu.png',
-    images: ['/sabores/images/picole-leite/cupuacu.png'],
+    src: '/images/picole-leite/cupuacu.png',
+    images: ['/images/picole-leite/cupuacu.png'],
     ingredients: ['Polpa de cupuaçu', 'Leite', 'Açúcar', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -266,8 +266,8 @@ export const products = ref([
     description:
       'O doce sabor da goiaba madura em uma versão cremosa e refrescante. Uma delícia que lembra um smoothie de fruta no palito.',
     type: 'image',
-    src: '/sabores/images/picole-leite/goiaba.png',
-    images: ['/sabores/images/picole-leite/goiaba.png'],
+    src: '/images/picole-leite/goiaba.png',
+    images: ['/images/picole-leite/goiaba.png'],
     ingredients: ['Leite', 'Polpa de goiaba', 'Açúcar', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -286,8 +286,8 @@ export const products = ref([
     description:
       'A leveza do iogurte combinada com uma deliciosa calda de morango. Um picolé cremoso, refrescante e com um toque azedinho.',
     type: 'image',
-    src: '/sabores/images/picole-leite/iogurtemorango.png',
-    images: ['/sabores/images/picole-leite/iogurtemorango.png'],
+    src: '/images/picole-leite/iogurtemorango.png',
+    images: ['/images/picole-leite/iogurtemorango.png'],
     ingredients: [
       'Iogurte natural',
       'Leite',
@@ -313,8 +313,8 @@ export const products = ref([
     description:
       'A doçura e a cremosidade inconfundíveis do leite condensado. Uma sobremesa gelada, simples e absolutamente deliciosa.',
     type: 'image',
-    src: '/sabores/images/picole-leite/leitecondensado.png',
-    images: ['/sabores/images/picole-leite/leitecondensado.png'],
+    src: '/images/picole-leite/leitecondensado.png',
+    images: ['/images/picole-leite/leitecondensado.png'],
     ingredients: ['Leite condensado', 'Leite', 'Creme de leite', 'Açúcar', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -333,8 +333,8 @@ export const products = ref([
     description:
       'A combinação perfeita do azedinho do limão com a cremosidade do leite condensado. Refrescante e cremoso na medida certa.',
     type: 'image',
-    src: '/sabores/images/picole-leite/limaosuico.png',
-    images: ['/sabores/images/picole-leite/limaosuico.png'],
+    src: '/images/picole-leite/limaosuico.png',
+    images: ['/images/picole-leite/limaosuico.png'],
     ingredients: ['Leite condensado', 'Suco de limão', 'Água', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -353,8 +353,8 @@ export const products = ref([
     description:
       'O autêntico sabor do milho verde em um picolé incrivelmente cremoso. Uma delícia que remete às festas juninas e à culinária brasileira.',
     type: 'image',
-    src: '/sabores/images/picole-leite/milho.png',
-    images: ['/sabores/images/picole-leite/milho.png'],
+    src: '/images/picole-leite/milho.png',
+    images: ['/images/picole-leite/milho.png'],
     ingredients: ['Leite', 'Milho verde', 'Açúcar', 'Leite condensado', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -373,8 +373,8 @@ export const products = ref([
     description:
       'O sabor clássico e amado do morango em uma versão super cremosa. Feito com polpa da fruta, é doce na medida certa.',
     type: 'image',
-    src: '/sabores/images/picole-leite/morangoleite.png',
-    images: ['/sabores/images/picole-leite/morangoleite.png'],
+    src: '/images/picole-leite/morangoleite.png',
+    images: ['/images/picole-leite/morangoleite.png'],
     ingredients: ['Leite', 'Polpa de morango', 'Açúcar', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '65g (1 unidade)',
@@ -395,8 +395,8 @@ export const products = ref([
     description:
       'Puro frescor tropical! Feito com suco natural de abacaxi, nosso picolé de fruta é a pedida certa para matar o calor com muito sabor e leveza.',
     type: 'image',
-    src: '/sabores/images/picole-fruta/abacaxi.png',
-    images: ['/sabores/images/picole-fruta/abacaxi.png'],
+    src: '/images/picole-fruta/abacaxi.png',
+    images: ['/images/picole-fruta/abacaxi.png'],
     ingredients: ['Água', 'Açúcar', 'Polpa de abacaxi', 'Ácido cítrico', 'Estabilizantes'],
     nutrition: {
       Porção: '60g (1 unidade)',
@@ -417,8 +417,8 @@ export const products = ref([
     description:
       'A doçura irresistível do leite condensado em um formato mini, perfeito para uma sobremesa rápida e deliciosa.',
     type: 'image',
-    src: '/sabores/images/picole-ituzinho/ituleitecondensado.png',
-    images: ['/sabores/images/picole-ituzinho/ituleitecondensado.png'],
+    src: '/images/picole-ituzinho/ituleitecondensado.png',
+    images: ['/images/picole-ituzinho/ituleitecondensado.png'],
     ingredients: ['Leite condensado', 'Leite', 'Creme de leite', 'Estabilizantes'],
     nutrition: {
       Porção: '45g (1 unidade)',
@@ -437,8 +437,8 @@ export const products = ref([
     description:
       'O sabor tropical e azedinho do maracujá em uma versão mini e cremosa. Um picolé para refrescar seu dia em pequenas porções.',
     type: 'image',
-    src: '/sabores/images/picole-ituzinho/itumaracuja.png',
-    images: ['/sabores/images/picole-ituzinho/itumaracuja.png'],
+    src: '/images/picole-ituzinho/itumaracuja.png',
+    images: ['/images/picole-ituzinho/itumaracuja.png'],
     ingredients: ['Leite', 'Polpa de maracujá', 'Açúcar', 'Leite em pó', 'Estabilizantes'],
     nutrition: {
       Porção: '45g (1 unidade)',
@@ -459,8 +459,8 @@ export const products = ref([
     description:
       'Uma casquinha crocante de chocolate que esconde um recheio incrivelmente cremoso de brigadeiro. A sobremesa perfeita no palito!',
     type: 'image',
-    src: '/sabores/images/picole-skimo/brigadeiro.png',
-    images: ['/sabores/images/picole-skimo/brigadeiro.png'],
+    src: '/images/picole-skimo/brigadeiro.png',
+    images: ['/images/picole-skimo/brigadeiro.png'],
     ingredients: [
       'Leite condensado',
       'Creme de leite',
@@ -485,8 +485,8 @@ export const products = ref([
     description:
       'A combinação perfeita de um recheio cremoso de morango envolvido por uma casquinha crocante de chocolate. Uma verdadeira tentação!',
     type: 'image',
-    src: '/sabores/images/picole-skimo/tentacao.png',
-    images: ['/sabores/images/picole-skimo/tentacao.png'],
+    src: '/images/picole-skimo/tentacao.png',
+    images: ['/images/picole-skimo/tentacao.png'],
     ingredients: [
       'Leite',
       'Polpa de morango',
