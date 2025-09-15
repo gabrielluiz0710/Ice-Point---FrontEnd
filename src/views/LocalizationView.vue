@@ -3,8 +3,6 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import icePointLogo from '@/assets/images/logo_full.png';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import iceCreamIconUrl from '@/assets/images/ice-cream-marker.svg'; // 1. Importa o ícone
-import markerShadowUrl from '@/assets/images/marker-shadow.svg';
 
 const wazeLink = "https://ul.waze.com/ul?place=ChIJtZbKt4HPupQRNvCfvu4DthI&ll=-19.76100750%2C-47.89979100&navigate=yes";
 const googleMapsLink = "https://www.google.com/maps/search/?api=1&query=Av.+Padre+Eddie+Bernardes+da+Silva,+965+-+Lourdes,+Uberaba+-+MG";
@@ -15,14 +13,12 @@ const locationCoords: L.LatLngExpression = [-19.76100750, -47.89979100];
 const mapContainerRef = ref<HTMLElement | null>(null);
 const isModalVisible = ref(false);
 
-const iceCreamIcon = L.icon({
-    iconUrl: iceCreamIconUrl,
-    shadowUrl: markerShadowUrl,
-
-    iconSize: [40, 58],
-    shadowSize: [40, 20],
-    iconAnchor: [20, 58],
-    shadowAnchor: [20, 20],
+const animatedIcon = L.divIcon({
+    className: 'custom-div-icon',
+    html: `<div class="marker-pin"></div>`,
+    iconSize: [50, 62],
+    iconAnchor: [25, 62],
+    popupAnchor: [0, -65]
 });
 
 const openModal = () => {
@@ -49,13 +45,15 @@ onMounted(() => {
             zoomControl: true,
         }).setView(locationCoords, 17);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }).addTo(map);
 
-        L.marker(locationCoords, { icon: iceCreamIcon }).addTo(map);
+        const marker = L.marker(locationCoords, { icon: animatedIcon }).addTo(map);
 
-        map.on('click', openModal);
+        marker.bindPopup("<b>Ice Point</b><br>O sorvete mais feliz da cidade! ✨");
+        marker.on('click', openModal);
+
     }
 
 
@@ -257,8 +255,10 @@ onUnmounted(() => {
 .hero-title {
     font-size: 4rem;
     font-weight: 700;
+    line-height: 0.9;
     color: var(--c-text-dark);
     text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
 }
 
 .hero-subtitle {
@@ -684,6 +684,76 @@ onUnmounted(() => {
 
     .modal-subtitle {
         font-size: 1rem;
+    }
+}
+
+:deep(.leaflet-control-zoom-in),
+:deep(.leaflet-control-zoom-out) {
+    background-color: var(--c-azul) !important;
+    color: white !important;
+    border-radius: 12px !important;
+    border: 2px solid var(--c-branco) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 32px !important;
+    font-size: 1.8rem !important;
+    font-weight: bold !important;
+}
+
+:deep(.leaflet-control-zoom-in:hover),
+:deep(.leaflet-control-zoom-out:hover) {
+    background-color: var(--c-azul-dark) !important;
+}
+
+:deep(.leaflet-control-zoom) {
+    border: none !important;
+}
+
+:deep(.custom-div-icon) {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+:deep(.custom-div-icon .marker-pin) {
+    width: 60px;
+    height: 60px;
+    border-radius: 50% 50% 50% 0;
+    background: var(--c-azul);
+    position: absolute;
+    transform: rotate(-45deg);
+    left: 50%;
+    top: 50%;
+    margin-left: -30px;
+    margin-top: -30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    animation: pulse 2s infinite ease-out;
+}
+
+:deep(.custom-div-icon img) {
+    position: relative;
+    z-index: 1;
+    width: 40px;
+    height: 40px;
+    transform: translateY(-4px);
+}
+
+@keyframes pulse {
+    0% {
+        transform: rotate(-45deg) scale(0.8);
+        box-shadow: 0 0 0 0 var(--c-azul);
+    }
+
+    70% {
+        transform: rotate(-45deg) scale(1);
+        box-shadow: 0 0 0 20px rgba(239, 98, 159, 0);
+    }
+
+    100% {
+        transform: rotate(-45deg) scale(0.8);
+        box-shadow: 0 0 0 0 rgba(239, 98, 159, 0);
     }
 }
 </style>

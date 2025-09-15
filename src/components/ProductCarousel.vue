@@ -218,23 +218,35 @@ onUnmounted(() => {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 12px;
 }
 
 .carousel-pagination button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    background-color: transparent;
+    position: relative;
+}
+
+.carousel-pagination button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: none;
     background-color: #ddd;
-    padding: 0;
-    cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.carousel-pagination button.active {
+.carousel-pagination button.active::before {
     background-color: var(--c-rosa);
-    transform: scale(1.2);
+    transform: translate(-50%, -50%) scale(1.3);
 }
 
 @media (max-width: 768px) {

@@ -15,7 +15,7 @@ defineProps<{
         <div class="card-data">
             <h3 class="card-title">{{ item.title }}</h3>
             <p class="card-description">{{ item.description }}</p>
-            <a :href="item.link" target="_blank" class="card-button">Ver mais</a>
+            <router-link :to="`/produtos/${item.id}`" class="card-button">Ver mais</router-link>
         </div>
     </article>
 </template>

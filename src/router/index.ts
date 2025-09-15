@@ -1,11 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainView from '../views/Main.vue'
-import SaboresView from '../views/Sabores.vue'
+import ProductsView from '../views/ProductsView.vue'
 import ShoppingCartView from '../views/ShoppingCartView.vue'
 import CheckoutView from '../views/CheckoutView.vue'
 import OrderConfirmationView from '../views/OrderConfirmationView.vue'
 import AboutUsView from '../views/AboutUsView.vue'
 import LocalizationView from '../views/LocalizationView.vue'
+import ContactView from '../views/ContactView.vue'
+import ProductDetailsView from '../views/ProductDetailsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -41,9 +43,20 @@ const router = createRouter({
       component: LocalizationView,
     },
     {
-      path: '/sabores',
-      name: 'sabores',
-      component: () => SaboresView,
+      path: '/contatos',
+      name: 'contatos',
+      component: ContactView,
+    },
+    {
+      path: '/produtos',
+      name: 'produtos',
+      component: () => ProductsView,
+    },
+    {
+      path: '/produtos/:id',
+      name: 'ProdutoDetalhe',
+      component: ProductDetailsView,
+      props: true,
     },
   ],
 })

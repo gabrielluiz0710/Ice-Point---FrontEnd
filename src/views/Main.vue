@@ -36,49 +36,49 @@ const slideData = [
 
 const cardData: CardItem[] = [
   {
-    id: 1,
+    id: 92,
     image: brigadeiroImg,
     title: 'Brigadeiro',
     description: 'Picolé de chocolate com casquinha de chocolate meio amargo e granulado.',
     link: '#brigadeiro'
   },
   {
-    id: 2,
+    id: 94,
     image: tentacaoImg,
     title: 'Tentação',
     description: 'Picolé de morango ao leite com casquinha de chocolate meio amargo.',
     link: '#tentacao'
   },
   {
-    id: 3,
+    id: 87,
     image: ituLeiteCondensadoImg,
     title: 'Leite Condensado',
     description: 'Picolé de leite condensado com um delicioso recheio de morango.',
     link: '#leitecondensado1'
   },
   {
-    id: 4,
+    id: 58,
     image: limaoSuicoImg,
     title: 'Limão Suíço',
     description: 'Picolé de limão suíço',
     link: '#leitecondensado2'
   },
   {
-    id: 5,
+    id: 65,
     image: abacaxiImg,
     title: 'Abacaxi',
     description: 'Picolé de abacaxi',
     link: '#leitecondensado3'
   },
   {
-    id: 6,
+    id: 61,
     image: morangoLeiteImg,
     title: 'Morango ao Leite',
     description: 'Picolé de morango ao leite',
     link: '#leitecondensado4'
   },
   {
-    id: 7,
+    id: 89,
     image: ituMaracujaImg,
     title: 'Leite Condensado',
     description: 'Picolé de ituzinho de maracujá com recheio de maracujá',
@@ -142,7 +142,7 @@ const featuresData = [
             Experimente cada pedacinho da felicidade: Nossos produtos são feitos com carinho para trazer sorrisos em
             cada mordida.
           </p>
-          <a href="#" class="flavor-explosion-button">Ver Produtos</a>
+          <a href="/produtos" class="flavor-explosion-button">Ver Produtos</a>
         </div>
         <div class="flavor-explosion-image-wrapper">
           <img :src="flavorGirlImg" alt="Menina segurando um sorvete Ice Point" class="flavor-explosion-image" />
