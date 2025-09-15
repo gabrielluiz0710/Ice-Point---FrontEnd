@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { products } from '@/stores/sabores';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faSearchPlus, faPlus, faMinus } from '@fortawesome/free-solid-svg-icons';
+import { faSearchPlus, faPlus, faMinus, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 const route = useRoute();
 const router = useRouter();
@@ -209,9 +209,14 @@ function endPan() {
         </div>
 
         <div v-else class="container not-found">
-            <h1>Oops!</h1>
-            <p>Produto não encontrado. Que tal voltar e escolher outra delícia?</p>
-            <router-link to="/produtos" class="cta-button">Voltar para Produtos</router-link>
+            <div class="not-found-content">
+                <font-awesome-icon :icon="faQuestionCircle" class="not-found-icon" />
+
+                <h1>Oops! Sabor esgotado.</h1>
+                <p>Não encontramos o produto que você procurava. Mas não se preocupe, temos muitas outras delícias
+                    esperando por você!</p>
+                <router-link to="/produtos" class="cta-button">Ver outros sabores</router-link>
+            </div>
         </div>
 
         <div v-if="lightboxVisivel" class="lightbox-overlay" @click="fecharLightbox" @wheel.prevent="handleZoom">
@@ -272,18 +277,72 @@ function endPan() {
 }
 
 .not-found {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 250px);
+    padding: 40px 0;
+}
+
+.not-found-content {
+    background-color: var(--c-branco);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    padding: 40px;
     text-align: center;
-    padding: 80px 0;
+    max-width: 550px;
+    width: 100%;
+    animation: fadeInSlideUp 0.5s ease-out forwards;
+}
+
+.not-found-icon {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 24px;
+    fill: var(--c-rosa);
 }
 
 .not-found h1 {
-    font-size: 3rem;
+    font-family: var(--font-title);
+    font-size: 2.2rem;
     color: var(--c-azul-dark);
+    margin-bottom: 16px;
 }
 
 .not-found p {
-    font-size: 1.2rem;
-    margin: 20px 0 40px 0;
+    font-size: 1.1rem;
+    color: #666;
+    line-height: 1.6;
+    margin: 0 auto 32px auto;
+    max-width: 450px;
+}
+
+.not-found .cta-button {
+    display: inline-block;
+    padding: 12px 30px;
+    border-radius: 50px;
+    background-color: var(--c-rosa);
+    color: var(--c-branco);
+    text-decoration: none;
+    font-weight: 500;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.not-found .cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(239, 121, 141, 0.4);
+}
+
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .breadcrumb-nav {
