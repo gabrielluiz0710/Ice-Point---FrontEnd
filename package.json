@@ -21,8 +21,11 @@
     "@fortawesome/vue-fontawesome": "^3.0.8",
     "@tsconfig/node22": "^22.0.2",
     "@types/jsdom": "^21.1.7",
+    "@types/leaflet": "^1.9.20",
     "@types/node": "^22.15.32",
     "@vee-validate/yup": "^4.15.1",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vitejs/plugin-vue-jsx": "^5.0.0",
     "@vitest/eslint-plugin": "^1.2.7",
@@ -53,8 +56,7 @@
     "vue-imask": "^7.6.1",
     "vue-router": "^4.5.1",
     "vue-tsc": "^2.2.10",
-    "yup": "^1.7.0",
-    "@types/leaflet": "^1.9.20"
+    "yup": "^1.7.0"
   },
   "devDependencies": {
     "@types/vue-the-mask": "^0.11.5",

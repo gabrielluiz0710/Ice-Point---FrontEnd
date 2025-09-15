@@ -299,7 +299,7 @@ function endPan() {
     width: 100px;
     height: 100px;
     margin-bottom: 24px;
-    fill: var(--c-rosa);
+    color: var(--c-rosa);
 }
 
 .not-found h1 {
