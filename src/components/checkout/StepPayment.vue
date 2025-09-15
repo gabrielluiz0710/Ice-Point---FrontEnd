@@ -184,6 +184,7 @@ function finalizeOrder(formValues: any) {
     align-items: center;
     cursor: pointer;
     font-size: 1rem;
+    color: var(--c-text-dark);
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -197,7 +198,7 @@ function finalizeOrder(formValues: any) {
     display: inline-block;
     width: 24px;
     height: 24px;
-    background-color: var(--c-text-dark);
+    background-color: var(--c-text-light);
     border: 2px solid var(--color-border);
     border-radius: 6px;
     margin-right: 0.75rem;
