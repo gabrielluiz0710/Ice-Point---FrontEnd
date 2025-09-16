@@ -91,7 +91,7 @@ onMounted(() => {
                         v-if="!checkoutStore.useSameAddressForDelivery && checkoutStore.deliveryMethod === 'delivery'">
                         <p>{{ checkoutStore.deliveryAddress.street }}, {{ checkoutStore.deliveryAddress.number }}</p>
                         <p v-if="checkoutStore.deliveryAddress.complement">{{ checkoutStore.deliveryAddress.complement
-                            }}</p>
+                        }}</p>
                         <p>{{ checkoutStore.deliveryAddress.neighborhood }}, {{ checkoutStore.deliveryAddress.city }} -
                             {{
                                 checkoutStore.deliveryAddress.state }}</p>
@@ -133,7 +133,7 @@ onMounted(() => {
             <div class="next-steps">
                 <p>Você pode acompanhar o status do seu pedido a qualquer momento na sua área de perfil.</p>
                 <div class="action-buttons">
-                    <button @click="router.push('/profile/orders')" class="btn-primary">
+                    <button @click="router.push({ path: '/perfil', query: { tab: 'orders' } })" class="btn-primary">
                         <font-awesome-icon :icon="faUserCircle" /> Ver Meus Pedidos
                     </button>
                     <button @click="router.push('/carrinho')" class="btn-secondary">

@@ -215,6 +215,8 @@ const scrollToFilters = () => {
 };
 
 onMounted(() => {
+  window.scrollTo(0, 0);
+
   const saboresSection = document.querySelector('#sabores') as HTMLElement;
   const hero = document.querySelector(".hero") as HTMLElement;
   const listeners: { element: EventTarget; type: string; handler: EventListener }[] = [];

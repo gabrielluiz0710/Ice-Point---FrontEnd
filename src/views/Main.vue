@@ -18,6 +18,7 @@ import limaoSuicoImg from '@/assets/images/cards/limaosuico.png';
 import carrinhoImg from '@/assets/images/carrinho.png';
 import flavorGirlImg from '@/assets/images/caracter2.png';
 import Depoimentos from '@/components/Depoimentos.vue';
+import { onMounted } from 'vue';
 
 const slideData = [
   {
@@ -108,6 +109,10 @@ const featuresData = [
     description: 'Todos nossos produtos com preço de fábrica para você!'
   }
 ]
+
+onMounted(() => {
+  window.scrollTo(0, 0);
+});
 </script>
 
 <template>

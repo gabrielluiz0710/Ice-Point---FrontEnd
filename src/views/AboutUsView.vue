@@ -47,6 +47,7 @@ const timelineRef = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver;
 
 onMounted(() => {
+    window.scrollTo(0, 0);
     observer = new IntersectionObserver(
         (entries) => {
             entries.forEach((entry) => {

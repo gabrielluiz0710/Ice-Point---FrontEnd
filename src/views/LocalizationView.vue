@@ -39,6 +39,8 @@ const updateWidth = () => {
 };
 
 onMounted(() => {
+    window.scrollTo(0, 0);
+
     if (mapContainerRef.value) {
         const map = L.map(mapContainerRef.value, {
             scrollWheelZoom: false,

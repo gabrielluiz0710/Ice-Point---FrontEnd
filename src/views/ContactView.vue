@@ -62,6 +62,8 @@ contactInfo.value.find(c => c.type === 'Email')!.link = emailLink.value;
 const contactPageRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
+    window.scrollTo(0, 0);
+
     const options = {
         root: null,
         threshold: 0.1,
