@@ -10,6 +10,11 @@ const lastScrollY = ref(0);
 const isHeaderVisible = ref(true);
 
 const handleScroll = () => {
+    if (isSidebarOpen.value) {
+        isHeaderVisible.value = true;
+        return;
+    }
+
     const currentScrollY = window.scrollY;
 
     if (currentScrollY <= 0) {
@@ -380,13 +385,13 @@ onBeforeUnmount(() => {
         height: 100vh;
         flex-direction: column;
         align-items: flex-start;
-        justify-content: center;
-        gap: 1.5rem;
-        padding: 2rem;
+        padding: 8rem 2rem 2rem 2rem;
         background-color: rgba(218, 96, 118, 0.9);
         backdrop-filter: blur(10px);
         transform: translateX(-100%);
         transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        justify-content: flex-start;
+        gap: 1.5rem;
     }
 
     .navigation-header-mobile.active {
@@ -431,16 +436,18 @@ onBeforeUnmount(() => {
     }
 
     .social-icons {
+        margin-top: auto;
+        padding-top: 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+        width: 100%;
         display: flex;
-        position: absolute;
-        bottom: 2rem;
-        left: 2rem;
         gap: 2rem;
     }
 
     .social-icons a {
         color: var(--c-branco);
         transition: all 0.3s ease;
+        font-size: 1.5rem;
     }
 
     @keyframes swing-in {
