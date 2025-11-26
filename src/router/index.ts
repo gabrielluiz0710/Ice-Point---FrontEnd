@@ -76,12 +76,12 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => LoginRegisterView,
+      component: LoginRegisterView,
     },
     {
       path: '/atualizar-senha',
       name: 'UpdatePassword',
-      component: () => UpdatePasswordView,
+      component: UpdatePasswordView,
     },
   ],
 })
