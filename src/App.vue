@@ -17,7 +17,6 @@ import Footer from './components/Footer.vue'
 <style scoped>
 main {
   padding-top: 70px;
-  min-height: 100vh;
   background-color: var(--c-branco);
 }
 </style>

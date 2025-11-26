@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue';
-import { RouterLink } from 'vue-router';
-import { faShoppingCart, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faUser, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import { useUserStore } from '@/stores/user' // Importa o User Store
+import { RouterLink, useRouter } from 'vue-router'; // 👈 Adicione useRouter aqui!
+
 const isSidebarOpen = ref(false);
 
 const navigationHeaderRef = ref<HTMLElement | null>(null);
@@ -57,6 +59,22 @@ const handleClickOutside = (event: MouseEvent) => {
     }
 };
 
+const userStore = useUserStore()
+const router = useRouter()
+
+// Nova função para a ação de perfil
+const handleProfileClick = () => {
+    if (userStore.isAuthenticated) {
+        closeSidebar()
+        // Redireciona para a página de perfil real
+        router.push('/perfil')
+    } else {
+        closeSidebar()
+        // Redireciona para a página de login
+        router.push('/login')
+    }
+}
+
 onMounted(() => {
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('scroll', handleScroll);
@@ -97,10 +115,15 @@ onBeforeUnmount(() => {
                     <font-awesome-icon :icon="faShoppingCart" />
                     <span>Montar Carrinho</span>
                 </RouterLink>
-                <RouterLink to="/perfil">
+                <a href="#" @click.prevent="handleProfileClick">
                     <font-awesome-icon :icon="faUser" />
-                    <span>Meu Perfil</span>
-                </RouterLink>
+                    <span>{{ userStore.isAuthenticated ? userStore.firstName : 'Meu Perfil' }}</span>
+                </a>
+
+                <a href="#" v-if="userStore.isAuthenticated" @click.prevent="userStore.logout">
+                    <font-awesome-icon :icon="faSignOutAlt" />
+                    <span>Sair</span>
+                </a>
             </nav>
 
             <div class="social-icons-desktop">
@@ -127,10 +150,16 @@ onBeforeUnmount(() => {
                     <font-awesome-icon :icon="faShoppingCart" />
                     <span>Montar Carrinho</span>
                 </RouterLink>
-                <RouterLink to="/perfil" class="action-btn-mobile" @click="closeSidebar">
+                <a href="#" class="action-btn-mobile" @click.prevent="handleProfileClick">
                     <font-awesome-icon :icon="faUser" />
-                    <span>Meu Perfil</span>
-                </RouterLink>
+                    <span>{{ userStore.isAuthenticated ? userStore.firstName : 'Meu Perfil' }}</span>
+                </a>
+
+                <a href="#" class="action-btn-mobile" v-if="userStore.isAuthenticated"
+                    @click.prevent="userStore.logout">
+                    <font-awesome-icon :icon="faSignOutAlt" />
+                    <span>Sair</span>
+                </a>
             </div>
 
             <div class="social-icons">

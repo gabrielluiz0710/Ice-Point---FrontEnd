@@ -1,6 +1,9 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { Ref } from 'vue'
+
+const ANON_CART_KEY = 'icepoint_anon_cart'
+
 import brigadeiroImg from '@/assets/images/cards/brigadeiro.png'
 import tentacaoImg from '@/assets/images/cards/tentacao.png'
 import ituLeiteCondensadoImg from '@/assets/images/cards/ituleitecondensado.png'
@@ -9,6 +12,7 @@ import ituMaracujaImg from '@/assets/images/cards/itumaracuja.png'
 import morangoLeiteImg from '@/assets/images/cards/morangoleite.png'
 import limaoSuicoImg from '@/assets/images/cards/limaosuico.png'
 import milhoImg from '@/assets/images/cards/milho.png'
+
 export interface Product {
   id: number
   name: string
@@ -132,6 +136,56 @@ export const useCartStore = defineStore('cart', () => {
     return cartItems.value.reduce((total, item) => total + item.price * item.quantity, 0)
   })
 
+  function loadAnonCartFromStorage() {
+    const storedItems = localStorage.getItem(ANON_CART_KEY)
+    if (storedItems) {
+      const anonItems = JSON.parse(storedItems) as { productId: number; quantity: number }[]
+
+      // Mescla os itens do LocalStorage no state do Pinia (productCategories)
+      anonItems.forEach((anonItem) => {
+        for (const category of productCategories.value) {
+          const product = category.products.find((p) => p.id === anonItem.productId)
+          if (product) {
+            // Assume que a PK no DB é igual ao ID do produto no frontend
+            product.quantity = anonItem.quantity
+            break
+          }
+        }
+      })
+    }
+  }
+
+  function saveAnonCartToStorage() {
+    // Salva apenas os itens que estão no carrinho (quantity > 0)
+    const itemsToStore = cartItems.value.map((item) => ({
+      productId: item.id,
+      quantity: item.quantity,
+    }))
+    localStorage.setItem(ANON_CART_KEY, JSON.stringify(itemsToStore))
+  }
+
+  function clearAnonStorage() {
+    localStorage.removeItem(ANON_CART_KEY)
+  }
+
+  function getAnonItems() {
+    const storedItems = localStorage.getItem(ANON_CART_KEY)
+    return storedItems ? JSON.parse(storedItems) : []
+  }
+
+  // Watcher para salvar o carrinho no LocalStorage sempre que for alterado
+  // Nota: Em um app de verdade, isso só deve acontecer se o usuário NÃO estiver logado.
+  watch(cartItems, saveAnonCartToStorage, { deep: true })
+
+  // Chamado no login (veja useUserStore)
+  async function fetchUserCart() {
+    console.log('Carregando/Mesclando carrinho persistente do DB...')
+    // Lógica de DB virá aqui
+  }
+
+  // Inicialização: carrega o carrinho anônimo ao iniciar o Store
+  loadAnonCartFromStorage()
+
   function updateQuantity({ productId, newQuantity }: { productId: number; newQuantity: number }) {
     const quantity = Math.max(0, newQuantity)
     for (const category of productCategories.value) {
@@ -158,5 +212,8 @@ export const useCartStore = defineStore('cart', () => {
     totalCartPrice,
     updateQuantity,
     emptyCart,
+    clearAnonStorage,
+    getAnonItems,
+    fetchUserCart,
   }
 })

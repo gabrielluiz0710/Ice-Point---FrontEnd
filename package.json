@@ -19,6 +19,7 @@
     "@fortawesome/free-brands-svg-icons": "^6.5.2",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/vue-fontawesome": "^3.0.8",
+    "@supabase/supabase-js": "^2.84.0",
     "@tsconfig/node22": "^22.0.2",
     "@types/jsdom": "^21.1.7",
     "@types/leaflet": "^1.9.20",
