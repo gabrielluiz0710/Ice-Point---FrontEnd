@@ -5,10 +5,26 @@ import type { Provider } from '@supabase/supabase-js'
 import { useCartStore } from './cart'
 import router from '@/router'
 
+interface Address {
+  id?: number
+  zip: string // Backend manda 'zip'
+  street: string // Backend manda 'street'
+  number: string // Backend manda 'number'
+  complement?: string // Backend manda 'complement'
+  neighborhood: string // Backend manda 'neighborhood'
+  city: string // Backend manda 'city'
+  state: string // Backend manda 'state'
+  principal: boolean
+}
+
 interface UserProfile {
   id: string
   nome: string
   email: string
+  phone?: string
+  cpf?: string
+  birthDate?: string
+  addresses: Address[]
   tipo: 'CLIENTE' | 'FUNCIONARIO' | 'ADMIN'
 }
 
@@ -49,8 +65,12 @@ export const useUserStore = defineStore('user', () => {
     user.value = {
       id: userData.userId,
       email: userData.email,
-      nome: userData.nome || userData.email.split('@')[0],
+      nome: userData.nome,
       tipo: userData.tipo,
+      phone: userData.phone || '',
+      cpf: userData.cpf || '',
+      birthDate: userData.birthDate || '',
+      addresses: userData.addresses || [],
     } as UserProfile
 
     isAuthenticated.value = true
@@ -93,6 +113,27 @@ export const useUserStore = defineStore('user', () => {
         message: 'Verifique seu email para confirmar o cadastro.',
       }
     }
+  }
+
+  async function updateProfile(payload: any) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    const token = session?.access_token
+
+    const response = await fetch(`${API_URL}/users/profile`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) throw new Error('Erro ao atualizar')
+
+    const resJson = await response.json()
+    await fetchUserProfile(user.value!.id)
   }
 
   async function login(email: string, password: string) {
@@ -235,5 +276,7 @@ export const useUserStore = defineStore('user', () => {
     loginWithProvider,
     logout,
     register,
+    updateProfile,
+    supabase,
   }
 })

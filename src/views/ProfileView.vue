@@ -8,18 +8,15 @@ import {
     faSignOutAlt,
     faAward
 } from '@fortawesome/free-solid-svg-icons'
-
+import { useUserStore } from '@/stores/user'
 import ProfilePersonalData from '@/components/profile/ProfilePersonalData.vue'
 import ProfileMyOrders from '@/components/profile/ProfileMyOrders.vue'
 import ProfileChangePassword from '@/components/profile/ProfileChangePassword.vue'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
-const user = {
-    firstName: 'Ana',
-    lastName: 'Silva',
-}
 
 type ProfileTab = 'personalData' | 'orders' | 'changePassword'
 const activeTab = ref<ProfileTab>('personalData')
@@ -66,7 +63,7 @@ function logout() {
                         <font-awesome-icon :icon="faAward" />
                     </div>
                     <h2 class="greeting-title">Meu Perfil</h2>
-                    <p class="greeting-name">Olá, {{ user.firstName }} {{ user.lastName }}</p>
+                    <p class="greeting-name">Olá, {{ userStore.firstName }}</p>
                 </div>
                 <nav class="profile-nav">
                     <button v-for="item in menuItems" :key="item.key" class="nav-item"
@@ -77,7 +74,7 @@ function logout() {
                         <span>{{ item.label }}</span>
                     </button>
                 </nav>
-                <button class="nav-item logout-btn" @click="logout">
+                <button class="nav-item logout-btn" @click="userStore.logout">
                     <font-awesome-icon :icon="faSignOutAlt" class="nav-icon" />
                     <span>Sair da Conta</span>
                 </button>

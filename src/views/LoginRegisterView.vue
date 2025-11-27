@@ -6,24 +6,20 @@ import { faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
 
 const userStore = useUserStore()
 
-// Estados
 const isLoginMode = ref(true)
 const isLoading = ref(false)
 const showForgotModal = ref(false)
 
-// Feedback Visual
 const feedbackMsg = ref('')
 const feedbackType = ref<'success' | 'error' | ''>('')
 
-// Campos
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const name = ref('')
 const phone = ref('')
-const birthDate = ref('') // Agora é string formatada dd/mm/aaaa
+const birthDate = ref('')
 
-// Esqueci a senha
 const forgotEmail = ref('')
 const forgotLoading = ref(false)
 const forgotMsg = ref('')
@@ -32,8 +28,6 @@ const forgotType = ref<'success' | 'error' | ''>('')
 const passwordsMatch = computed(() => {
     return isLoginMode.value || password.value === confirmPassword.value
 })
-
-// --- FUNÇÕES DE AJUDA ---
 
 const translateSupabaseError = (msg: string) => {
     const errorLower = msg.toLowerCase()
@@ -52,28 +46,23 @@ const showFeedback = (msg: string, type: 'success' | 'error') => {
     if (type === 'error') setTimeout(() => feedbackMsg.value = '', 5000)
 }
 
-// Validador de Idade e Data
 const isValidDateAndAge = (dateString: string): { valid: boolean, msg?: string } => {
-    // Regex para formato dd/mm/aaaa
     if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return { valid: false, msg: 'Data inválida.' }
 
     const parts = dateString.split('/')
     const day = parseInt(parts[0], 10)
-    const month = parseInt(parts[1], 10) - 1 // Mês JS é 0-11
+    const month = parseInt(parts[1], 10) - 1
     const year = parseInt(parts[2], 10)
     const currentYear = new Date().getFullYear()
 
-    // Validações básicas de calendário
     if (year < 1900 || year > currentYear) return { valid: false, msg: 'Ano inválido.' }
     if (month < 0 || month > 11) return { valid: false, msg: 'Mês inválido.' }
 
     const dateObj = new Date(year, month, day)
-    // Verifica se o dia existe no mês (ex: 31/02 retornaria false aqui pois viraria março)
     if (dateObj.getDate() !== day || dateObj.getMonth() !== month || dateObj.getFullYear() !== year) {
         return { valid: false, msg: 'Data inexistente.' }
     }
 
-    // Cálculo de Idade (+18)
     const today = new Date()
     let age = today.getFullYear() - dateObj.getFullYear()
     const m = today.getMonth() - dateObj.getMonth()
@@ -86,7 +75,6 @@ const isValidDateAndAge = (dateString: string): { valid: boolean, msg?: string }
     return { valid: true }
 }
 
-// Converter dd/mm/aaaa para aaaa-mm-dd (Formato SQL)
 const convertDateToISO = (dateString: string) => {
     const parts = dateString.split('/')
     return `${parts[2]}-${parts[1]}-${parts[0]}`
@@ -96,7 +84,6 @@ const handleAuth = async () => {
     feedbackMsg.value = ''
 
     if (!isLoginMode.value) {
-        // Validações de Cadastro
         if (!name.value || !phone.value || !birthDate.value) {
             showFeedback('Todos os campos são obrigatórios.', 'error')
             return
@@ -112,14 +99,12 @@ const handleAuth = async () => {
             return
         }
 
-        // Validação de telefone (Mínimo 10 dígitos + formatação)
         const rawPhone = phone.value.replace(/\D/g, '')
         if (rawPhone.length < 10) {
             showFeedback('Telefone incompleto.', 'error')
             return
         }
 
-        // Validação de Idade
         const ageCheck = isValidDateAndAge(birthDate.value)
         if (!ageCheck.valid) {
             showFeedback(ageCheck.msg || 'Data inválida', 'error')
@@ -132,7 +117,6 @@ const handleAuth = async () => {
         if (isLoginMode.value) {
             await userStore.login(email.value, password.value)
         } else {
-            // Prepara data para envio (ISO)
             const isoDate = convertDateToISO(birthDate.value)
 
             const result = await userStore.register({
@@ -140,7 +124,7 @@ const handleAuth = async () => {
                 password: password.value,
                 name: name.value,
                 phone: phone.value,
-                birthDate: isoDate // Envia formatado aaaa-mm-dd
+                birthDate: isoDate
             })
 
             if (result?.success) {
@@ -198,42 +182,32 @@ const handleForgotPassword = async () => {
     }
 }
 
-// --- MÁSCARAS DE INPUT ---
-
-// Máscara de Telefone: (XX) XXXX-XXXX ou (XX) XXXXX-XXXX
 const formatPhone = (event: Event) => {
     const input = event.target as HTMLInputElement
-    let value = input.value.replace(/\D/g, '') // Remove tudo que não é dígito
+    let value = input.value.replace(/\D/g, '')
 
-    // Limita a 11 dígitos
     if (value.length > 11) value = value.slice(0, 11)
 
-    // Aplica a formatação
     if (value.length > 10) {
-        // 11 dígitos: (XX) XXXXX-XXXX
         value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
     } else if (value.length > 5) {
-        // 10 dígitos ou em digitação: (XX) XXXX-XXXX
         value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3')
     } else if (value.length > 2) {
-        // Apenas DDD
         value = value.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2')
     } else if (value.length > 0) {
         value = value.replace(/^(\d*)/, '($1')
     }
 
     phone.value = value
-    input.value = value // Força atualização visual
+    input.value = value
 }
 
-// Máscara de Data: dd/mm/aaaa
 const formatDate = (event: Event) => {
     const input = event.target as HTMLInputElement
-    let value = input.value.replace(/\D/g, '') // Remove não dígitos
+    let value = input.value.replace(/\D/g, '')
 
-    if (value.length > 8) value = value.slice(0, 8) // Limita a 8 números
+    if (value.length > 8) value = value.slice(0, 8)
 
-    // Adiciona as barras
     if (value.length >= 5) {
         value = value.replace(/(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3')
     } else if (value.length >= 3) {
@@ -253,7 +227,6 @@ const formatDate = (event: Event) => {
                 <h1>{{ isLoginMode ? 'Login' : 'Crie sua conta' }}</h1>
             </div>
 
-            <!-- Feedback Geral -->
             <transition name="fade">
                 <div v-if="feedbackMsg" :class="['alert-box', feedbackType]">
                     {{ feedbackMsg }}
@@ -262,7 +235,6 @@ const formatDate = (event: Event) => {
 
             <form @submit.prevent="handleAuth" class="auth-form">
 
-                <!-- Transição suave entre Login e Cadastro -->
                 <transition-group name="list" tag="div" class="fields-container">
 
                     <div v-if="!isLoginMode" class="input-group full-width">
@@ -278,14 +250,12 @@ const formatDate = (event: Event) => {
                         </div>
                         <div class="input-group">
                             <label for="birthDate">Nascimento</label>
-                            <!-- Input Text com máscara, não Date -->
                             <input id="birthDate" type="text" :value="birthDate" @input="formatDate"
                                 placeholder="dd/mm/aaaa" maxlength="10" />
                         </div>
                     </div>
                 </transition-group>
 
-                <!-- Campos Comuns -->
                 <div class="input-group">
                     <label for="email">Email</label>
                     <input id="email" type="email" v-model="email" required placeholder="seu@email.com" />
@@ -339,7 +309,6 @@ const formatDate = (event: Event) => {
 
         </div>
 
-        <!-- MODAL -->
         <transition name="modal-fade">
             <div v-if="showForgotModal" class="modal-overlay" @click.self="showForgotModal = false">
                 <div class="modal-card scale-in-center">
@@ -368,7 +337,6 @@ const formatDate = (event: Event) => {
 </template>
 
 <style scoped>
-/* CONFIGURAÇÕES GERAIS DE FONTE */
 * {
     font-family: 'Fredoka', sans-serif !important;
 }
@@ -389,12 +357,10 @@ const formatDate = (event: Event) => {
     padding: 3rem 2.5rem;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    /* Sombra suave */
     position: relative;
     border: 1px solid #f0f0f0;
 }
 
-/* Header */
 .auth-header {
     text-align: center;
     margin-bottom: 2rem;
@@ -414,7 +380,6 @@ const formatDate = (event: Event) => {
     font-weight: 400;
 }
 
-/* Form Styles */
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -434,23 +399,18 @@ const formatDate = (event: Event) => {
     width: 100%;
 }
 
-/* LABELS */
 .input-group label {
     font-size: 0.9rem;
     color: var(--c-azul);
-    /* Título do campo em azul/verde água */
     font-weight: 600;
     margin-left: 4px;
 }
 
-/* INPUTS */
 .input-group input {
     width: 100%;
     padding: 14px 16px;
     border: 2px solid transparent;
-    /* Sem borda visível inicialmente */
     background-color: #f1f5f9;
-    /* Fundo cinza azulado suave */
     border-radius: 12px;
     font-size: 1rem;
     color: var(--c-text-dark);
@@ -461,7 +421,6 @@ const formatDate = (event: Event) => {
 .input-group input:focus {
     background-color: #fff;
     border-color: var(--c-azul);
-    /* Borda azul ao focar */
     box-shadow: 0 4px 12px rgba(25, 197, 203, 0.15);
 }
 
@@ -480,15 +439,12 @@ const formatDate = (event: Event) => {
     gap: 1rem;
 }
 
-/* BOTÃO PRIMÁRIO (SEM DEGRADÊ) */
 .btn-primary {
     background-color: var(--c-azul);
-    /* Cor chapada */
     color: white;
     padding: 15px;
     border: none;
     border-radius: 50px;
-    /* Bem arredondado */
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
@@ -509,7 +465,6 @@ const formatDate = (event: Event) => {
     box-shadow: none;
 }
 
-/* Esqueci Senha */
 .forgot-link {
     text-align: right;
     margin-top: -5px;
@@ -527,7 +482,6 @@ const formatDate = (event: Event) => {
     text-decoration: underline;
 }
 
-/* Toggle Mode (Rodapé do form) */
 .toggle-container {
     text-align: center;
     margin-top: 2rem;
@@ -537,7 +491,6 @@ const formatDate = (event: Event) => {
 
 .toggle-container a {
     color: var(--c-rosa);
-    /* Rosa para destaque */
     font-weight: 700;
     text-decoration: none;
     margin-left: 5px;
@@ -547,7 +500,6 @@ const formatDate = (event: Event) => {
     color: var(--c-rosa-dark);
 }
 
-/* Divisor */
 .divider {
     display: flex;
     align-items: center;
@@ -572,7 +524,6 @@ const formatDate = (event: Event) => {
     color: #aaa;
 }
 
-/* Botões Sociais */
 .social-buttons {
     display: flex;
     gap: 1rem;
@@ -630,7 +581,6 @@ const formatDate = (event: Event) => {
     border: 1px solid #c8e6c9;
 }
 
-/* MODAL */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -703,7 +653,6 @@ const formatDate = (event: Event) => {
     color: #388e3c;
 }
 
-/* Animações e Transições */
 .swing-in-top-fwd {
     animation: swing-in-top-fwd 0.6s cubic-bezier(0.175, 0.885, 0.320, 1.275) both;
 }
@@ -738,7 +687,6 @@ const formatDate = (event: Event) => {
     }
 }
 
-/* Transições Vue */
 .list-move,
 .list-enter-active,
 .list-leave-active {
@@ -776,7 +724,6 @@ const formatDate = (event: Event) => {
     opacity: 0;
 }
 
-/* Loader Spinner */
 .loader {
     width: 20px;
     height: 20px;

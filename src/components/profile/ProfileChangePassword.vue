@@ -1,26 +1,82 @@
 <script setup lang="ts">
-import { faSave } from '@fortawesome/free-solid-svg-icons'
+import { ref } from 'vue'
+import { faPaperPlane, faCheckCircle, faExclamationCircle, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { useUserStore } from '@/stores/user'
+import { supabase } from '@/service/supabase'
+
+const userStore = useUserStore()
+const isLoading = ref(false)
+const feedbackMsg = ref('')
+const feedbackType = ref<'success' | 'error' | ''>('')
+
+const handleSendResetEmail = async () => {
+    // Segurança: garante que temos o email
+    if (!userStore.user?.email) {
+        feedbackMsg.value = 'Erro: Não foi possível identificar seu email.'
+        feedbackType.value = 'error'
+        return
+    }
+
+    isLoading.value = true
+    feedbackMsg.value = ''
+    feedbackType.value = ''
+
+    try {
+        const { error } = await supabase.auth.resetPasswordForEmail(userStore.user.email, {
+            // Redireciona para a rota que você criou no router (/atualizar-senha)
+            redirectTo: window.location.origin + '/atualizar-senha',
+        })
+
+        if (error) {
+            throw error
+        }
+
+        feedbackMsg.value = 'Email enviado com sucesso! Verifique sua caixa de entrada.'
+        feedbackType.value = 'success'
+
+    } catch (error: any) {
+        console.error(error)
+        feedbackMsg.value = 'Erro ao enviar email. Tente novamente mais tarde.'
+        feedbackType.value = 'error'
+    } finally {
+        isLoading.value = false
+    }
+}
 </script>
 
 <template>
     <div class="content-wrapper">
         <h1 class="content-title">Trocar Senha</h1>
         <p class="content-subtitle">
-            Para sua segurança, escolha uma senha forte e não a compartilhe.
+            O processo de troca de senha é feito via email para garantir sua segurança.
         </p>
-        <form class="password-form" @submit.prevent>
-            <div class="form-group">
-                <label for="new-password">Nova Senha</label>
-                <input id="new-password" type="password" placeholder="Digite sua nova senha..." />
+
+        <div class="info-container">
+            <div class="steps-box">
+                <h3>Como funciona:</h3>
+                <ol class="steps-list">
+                    <li>Clique no botão abaixo para solicitar a troca.</li>
+                    <li>Um link seguro será enviado para o seu email: <br>
+                        <strong>{{ userStore.user?.email }}</strong>
+                    </li>
+                    <li>Clique no link recebido para definir sua nova senha.</li>
+                </ol>
             </div>
-            <div class="form-group">
-                <label for="confirm-password">Confirmar Nova Senha</label>
-                <input id="confirm-password" type="password" placeholder="Confirme sua nova senha..." />
+
+            <div v-if="feedbackMsg" class="feedback-box" :class="feedbackType">
+                <font-awesome-icon :icon="feedbackType === 'success' ? faCheckCircle : faExclamationCircle" />
+                <span>{{ feedbackMsg }}</span>
             </div>
-            <button type="submit" class="save-btn">
-                <font-awesome-icon :icon="faSave" /> Salvar Alterações
+
+            <button @click="handleSendResetEmail" class="action-btn"
+                :disabled="isLoading || feedbackType === 'success'">
+                <font-awesome-icon v-if="isLoading" :icon="faSpinner" spin />
+                <font-awesome-icon v-else :icon="faPaperPlane" />
+                <span v-if="isLoading">Enviando...</span>
+                <span v-else-if="feedbackType === 'success'">Email Enviado</span>
+                <span v-else>Enviar Email de Troca</span>
             </button>
-        </form>
+        </div>
     </div>
 </template>
 
@@ -50,63 +106,99 @@ import { faSave } from '@fortawesome/free-solid-svg-icons'
     font-size: 1rem;
     color: var(--c-text-light);
     margin-top: 0;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid #f0f0f0;
 }
 
-.password-form {
-    max-width: 400px;
+.info-container {
+    max-width: 500px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    margin: 0 auto;
+    gap: 2rem;
 }
 
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+.steps-box {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.steps-box h3 {
+    margin-top: 0;
+    color: var(--c-azul);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.steps-list {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
     color: var(--c-text-dark);
 }
 
-.form-group input {
-    width: 100%;
-    padding: 0.8rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: 'Fredoka', sans-serif;
-    transition: all 0.2s ease;
+.steps-list li {
+    line-height: 1.5;
 }
 
-.form-group input:focus {
-    outline: none;
-    border-color: var(--c-azul);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+.steps-list strong {
+    color: var(--c-rosa);
+    word-break: break-all;
 }
 
-.save-btn {
+.action-btn {
     font-family: 'Fredoka', sans-serif;
     background-color: var(--c-azul);
     color: white;
-    padding: 0.9rem 1.5rem;
+    padding: 1rem 2rem;
     border-radius: 50px;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.1rem;
     border: none;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
+    gap: 0.8rem;
+    width: 100%;
 }
 
-.save-btn:hover {
+.action-btn:hover:not(:disabled) {
     background-color: var(--c-azul-dark);
     transform: translateY(-3px);
     box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+}
+
+.action-btn:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.feedback-box {
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 500;
+}
+
+.feedback-box.success {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.feedback-box.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
 }
 </style>

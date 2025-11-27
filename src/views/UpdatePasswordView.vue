@@ -96,7 +96,6 @@ const handleUpdate = async () => {
 </template>
 
 <style scoped>
-/* CONFIGURAÇÕES GERAIS DE FONTE */
 * {
     font-family: 'Fredoka', sans-serif !important;
 }
@@ -201,7 +200,6 @@ const handleUpdate = async () => {
     transform: translateY(-2px);
 }
 
-/* Loader */
 .loader {
     width: 20px;
     height: 20px;
@@ -223,7 +221,6 @@ const handleUpdate = async () => {
     }
 }
 
-/* Alerts */
 .alert-box {
     padding: 12px;
     border-radius: 10px;

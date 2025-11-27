@@ -27,6 +27,7 @@ const emit = defineEmits<{
 
 const formData = ref<Record<string, string>>({})
 const cepError = ref<string | null>(null)
+const ageError = ref<string | null>(null)
 const isFetchingCep = ref(false)
 
 watchEffect(() => {
@@ -39,6 +40,41 @@ watchEffect(() => {
     }
 })
 
+// --- MASCARA CPF ---
+watch(() => formData.value.cpf, (newVal) => {
+    if (!newVal) return
+    let v = newVal.replace(/\D/g, '')
+
+    if (v.length > 11) v = v.slice(0, 11)
+
+    v = v.replace(/(\d{3})(\d)/, '$1.$2')
+    v = v.replace(/(\d{3})(\d)/, '$1.$2')
+    v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+
+    if (v !== newVal) formData.value.cpf = v
+})
+
+// --- MASCARA TELEFONE ---
+watch(() => formData.value.phone, (newVal) => {
+    if (!newVal) return
+    let v = newVal.replace(/\D/g, '')
+
+    if (v.length > 11) v = v.slice(0, 11)
+
+    if (v.length > 10) {
+        v = v.replace(/^(\d\d)(\d{5})(\d{4}).*/, "($1) $2-$3");
+    } else if (v.length > 5) {
+        v = v.replace(/^(\d\d)(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+    } else if (v.length > 2) {
+        v = v.replace(/^(\d\d)(\d{0,5}).*/, "($1) $2");
+    } else {
+        v = v.replace(/^(\d*)/, "($1");
+    }
+
+    if (v !== newVal) formData.value.phone = v
+})
+
+// --- MASCARA CEP ---
 watch(() => formData.value.zip, (newCep, oldCep) => {
     if (newCep === undefined) return
 
@@ -89,9 +125,33 @@ async function fetchAddressFromCep(cep: string) {
 }
 
 function handleSave() {
-    if (!props.isLoading) {
-        emit('save', formData.value)
+    if (props.isLoading) return
+
+    if (formData.value.birthDate) {
+        const birthDate = new Date(formData.value.birthDate)
+        const today = new Date()
+
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const m = today.getMonth() - birthDate.getMonth()
+
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--
+        }
+
+        if (age < 18) {
+            ageError.value = 'É preciso ser maior de 18 anos.'
+            return
+        } else {
+            ageError.value = null
+        }
     }
+
+    const cleanData = { ...formData.value }
+    if (cleanData.cpf) cleanData.cpf = cleanData.cpf.replace(/\D/g, '')
+    if (cleanData.phone) cleanData.phone = cleanData.phone.replace(/\D/g, '')
+    if (cleanData.zip) cleanData.zip = cleanData.zip.replace(/\D/g, '')
+
+    emit('save', cleanData)
 }
 </script>
 
@@ -115,10 +175,12 @@ function handleSave() {
                                 <div class="input-wrapper">
                                     <input :id="field.name" v-model="formData[field.name]" :type="field.type || 'text'"
                                         :placeholder="field.placeholder || `Digite...`" :readonly="field.readonly" />
+
                                     <font-awesome-icon v-if="field.name === 'zip' && isFetchingCep" :icon="faSpinner"
                                         spin class="input-spinner" />
                                 </div>
                                 <p v-if="field.name === 'zip' && cepError" class="cep-error">{{ cepError }}</p>
+                                <p v-if="field.name === 'birthDate' && ageError" class="cep-error">{{ ageError }}</p>
                             </div>
                         </div>
                     </main>
