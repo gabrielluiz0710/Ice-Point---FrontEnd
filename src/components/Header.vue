@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue';
 import { faShoppingCart, faUser, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
-import { useUserStore } from '@/stores/user' // Importa o User Store
-import { RouterLink, useRouter } from 'vue-router'; // 👈 Adicione useRouter aqui!
+import { useUserStore } from '@/stores/user'
+import { RouterLink, useRouter } from 'vue-router';
 
 const isSidebarOpen = ref(false);
 
@@ -62,15 +62,12 @@ const handleClickOutside = (event: MouseEvent) => {
 const userStore = useUserStore()
 const router = useRouter()
 
-// Nova função para a ação de perfil
 const handleProfileClick = () => {
     if (userStore.isAuthenticated) {
         closeSidebar()
-        // Redireciona para a página de perfil real
         router.push('/perfil')
     } else {
         closeSidebar()
-        // Redireciona para a página de login
         router.push('/login')
     }
 }
@@ -411,7 +408,7 @@ onBeforeUnmount(() => {
         left: 0;
         width: 75%;
         max-width: 320px;
-        height: 100vh;
+        height: 100dvh;
         flex-direction: column;
         align-items: flex-start;
         padding: 8rem 2rem 2rem 2rem;
@@ -421,6 +418,7 @@ onBeforeUnmount(() => {
         transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
         justify-content: flex-start;
         gap: 1.5rem;
+        overflow-y: auto;
     }
 
     .navigation-header-mobile.active {
