@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
 import { faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
@@ -217,6 +217,10 @@ const formatDate = (event: Event) => {
     birthDate.value = value
     input.value = value
 }
+
+onMounted(() => {
+    window.scrollTo(0, 0);;
+});
 </script>
 
 <template>

@@ -19,8 +19,10 @@ import { supabase } from '@/service/supabase'
 
 const authGuard = async (to: any, from: any, next: any) => {
   const userStore = useUserStore()
+  console.log('[Router] AuthGuard iniciado para:', to.path)
 
-  if (userStore.isAuthenticated) {
+  if (userStore.isAuthenticated && userStore.user) {
+    console.log('[Router] Usuário já autenticado na store. Permitindo.')
     next()
     return
   }
@@ -30,12 +32,26 @@ const authGuard = async (to: any, from: any, next: any) => {
   } = await supabase.auth.getSession()
 
   if (session) {
+    console.log('[Router] Sessão Supabase existe.')
     if (!userStore.user) {
-      await userStore.loadUserSession()
+      console.log('[Router] Disparando loadUserSession em background (sem await)...')
+      userStore.loadUserSession().catch((err) => console.error('[Router] Erro bg load:', err))
     }
+
     next()
   } else {
-    next('/login')
+    const isSocialCallback = to.hash.includes('access_token') || to.query.code
+
+    if (isSocialCallback) {
+      console.log(
+        '[Router] Detectado callback social na URL. Permitindo renderizar para processar token.',
+      )
+      userStore.loadUserSession()
+      next()
+    } else {
+      console.log('[Router] Sem sessão. Redirecionando para login.')
+      next('/login')
+    }
   }
 }
 

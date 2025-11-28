@@ -9,6 +9,8 @@ import {
     faAward
 } from '@fortawesome/free-solid-svg-icons'
 import { useUserStore } from '@/stores/user'
+import { storeToRefs } from 'pinia'
+
 import ProfilePersonalData from '@/components/profile/ProfilePersonalData.vue'
 import ProfileMyOrders from '@/components/profile/ProfileMyOrders.vue'
 import ProfileChangePassword from '@/components/profile/ProfileChangePassword.vue'
@@ -16,7 +18,7 @@ import ProfileChangePassword from '@/components/profile/ProfileChangePassword.vu
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-
+const { isLoading } = storeToRefs(userStore)
 
 type ProfileTab = 'personalData' | 'orders' | 'changePassword'
 const activeTab = ref<ProfileTab>('personalData')
@@ -40,41 +42,66 @@ const activeComponent = computed(() => {
 
 onMounted(() => {
     window.scrollTo(0, 0);
+    console.log('[ProfileView] Montado! isLoading inicial:', isLoading.value);
 
-    const tabFromQuery = route.query.tab
-
+    const tabFromQuery = route.query.tab as string | undefined;
     if (tabFromQuery === 'orders' || tabFromQuery === 'changePassword') {
-        activeTab.value = tabFromQuery
+        activeTab.value = tabFromQuery as ProfileTab;
     }
 })
 
 function logout() {
     console.log('Saindo da conta...')
-    router.push('/login')
+    userStore.logout()
 }
 </script>
 
 <template>
     <div class="profile-view">
-        <div class="profile-grid">
+        <div v-if="isLoading" class="profile-grid">
+            <aside class="profile-sidebar skeleton-sidebar">
+                <div class="user-greeting">
+                    <div class="skeleton-box avatar-skeleton"></div>
+                    <div class="skeleton-box title-skeleton"></div>
+                    <div class="skeleton-box text-skeleton"></div>
+                </div>
+                <nav class="profile-nav">
+                    <div class="skeleton-box nav-item-skeleton"></div>
+                    <div class="skeleton-box nav-item-skeleton"></div>
+                    <div class="skeleton-box nav-item-skeleton"></div>
+                </nav>
+                <div class="skeleton-box nav-item-skeleton logout-skeleton"></div>
+            </aside>
+
+            <main class="profile-content skeleton-content">
+                <div class="skeleton-box header-skeleton"></div>
+                <div class="form-grid-skeleton">
+                    <div class="skeleton-box input-skeleton"></div>
+                    <div class="skeleton-box input-skeleton"></div>
+                    <div class="skeleton-box input-skeleton full"></div>
+                </div>
+                <div class="skeleton-box button-skeleton"></div>
+            </main>
+        </div>
+
+        <div v-else class="profile-grid fade-in-content">
             <aside class="profile-sidebar">
                 <div class="user-greeting">
                     <div class="avatar-icon">
                         <font-awesome-icon :icon="faAward" />
                     </div>
                     <h2 class="greeting-title">Meu Perfil</h2>
-                    <p class="greeting-name">Olá, {{ userStore.firstName }}</p>
+                    <p class="greeting-name">Olá, {{ userStore.user?.nome?.split(' ')[0] || 'Cliente' }}</p>
                 </div>
                 <nav class="profile-nav">
                     <button v-for="item in menuItems" :key="item.key" class="nav-item"
-                        :class="{ active: activeTab === item.key }"
-                        @click="activeTab = item.key; console.log('Aba alterada para:', item.key)">
+                        :class="{ active: activeTab === item.key }" @click="activeTab = item.key">
 
                         <font-awesome-icon :icon="item.icon" class="nav-icon" />
                         <span>{{ item.label }}</span>
                     </button>
                 </nav>
-                <button class="nav-item logout-btn" @click="userStore.logout">
+                <button class="nav-item logout-btn" @click="logout">
                     <font-awesome-icon :icon="faSignOutAlt" class="nav-icon" />
                     <span>Sair da Conta</span>
                 </button>
@@ -88,6 +115,7 @@ function logout() {
 </template>
 
 <style scoped>
+/* Mantenha todo o seu CSS igual, ele estava perfeito */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -105,7 +133,6 @@ function logout() {
     background-color: #f9f9f9;
     padding: 4rem 2rem;
     font-family: 'Fredoka', sans-serif;
-    animation: fadeInUp 0.5s ease-out;
 }
 
 .profile-grid {
@@ -114,6 +141,10 @@ function logout() {
     gap: 2rem;
     max-width: 1200px;
     margin: 0 auto;
+}
+
+.fade-in-content {
+    animation: fadeInUp 0.5s ease-out;
 }
 
 .profile-sidebar {
@@ -244,15 +275,81 @@ function logout() {
     padding: 2rem 3rem;
 }
 
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-    transition: opacity 0.3s ease, transform 0.3s ease;
+/* SKELETON CSS */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
 }
 
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-    opacity: 0;
-    transform: translateX(15px);
+.skeleton-box {
+    background: #e0e0e0;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+.avatar-skeleton {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+}
+
+.title-skeleton {
+    height: 24px;
+    width: 60%;
+    margin: 0 auto 0.5rem;
+}
+
+.text-skeleton {
+    height: 16px;
+    width: 40%;
+    margin: 0 auto;
+}
+
+.nav-item-skeleton {
+    height: 48px;
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+
+.logout-skeleton {
+    margin-top: 1rem;
+}
+
+.header-skeleton {
+    height: 32px;
+    width: 200px;
+    margin-bottom: 2rem;
+}
+
+.form-grid-skeleton {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.input-skeleton {
+    height: 50px;
+    border-radius: 12px;
+}
+
+.input-skeleton.full {
+    grid-column: 1 / -1;
+}
+
+.button-skeleton {
+    height: 50px;
+    width: 150px;
+    border-radius: 12px;
 }
 
 @media (max-width: 992px) {
@@ -272,6 +369,10 @@ function logout() {
 
     .profile-content {
         padding: 1.5rem;
+    }
+
+    .form-grid-skeleton {
+        grid-template-columns: 1fr;
     }
 }
 </style>

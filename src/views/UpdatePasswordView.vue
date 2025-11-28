@@ -16,7 +16,9 @@ const translateSupabaseError = (msg: string) => {
     return msg
 }
 
+
 onMounted(async () => {
+    window.scrollTo(0, 0);;
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
         alert('Link inválido ou expirado. Por favor, solicite novamente.')

@@ -87,7 +87,26 @@ const currentYear = new Date().getFullYear();
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; Copyright {{ currentYear }} Ice Point Sorveteria - Todos os direitos reservados.</p>
+            <nav class="footer-legal-nav">
+                <RouterLink to="/politica-privacidade" class="legal-link">Política de Privacidade</RouterLink>
+                <span class="nav-separator">•</span>
+                <RouterLink to="/exclusao-dados" class="legal-link">Exclusão de Dados</RouterLink>
+            </nav>
+
+            <div class="legal-info">
+                <span class="legal-item">
+                    <strong>Nome Fantasia:</strong> Sorveteria Ice Point </span>
+                <span class="separator">•</span>
+                <span class="legal-item">
+                    <strong>CNPJ:</strong> 39.256.511/0001-04 </span>
+                <span class="separator">•</span>
+                <span class="legal-item">
+                    <strong>Endereço:</strong> Avenida Padre Eddie Bernardes Silva, 965 - Uberaba/MG
+                </span>
+            </div>
+            <div class="copyright">
+                <p>© Copyright {{ currentYear }} Ice Point Sorveteria - Todos os direitos reservados.</p>
+            </div>
         </div>
     </footer>
 </template>
@@ -262,10 +281,88 @@ const currentYear = new Date().getFullYear();
 
 .footer-bottom {
     background-color: var(--c-azul-dark-footer);
-    padding: 1.2rem 2rem;
+    padding: 2.5rem 2rem 1.5rem;
     text-align: center;
-    font-size: 0.9rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+}
+
+.footer-legal-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.legal-link {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    position: relative;
+    padding-bottom: 4px;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+    letter-spacing: 0.03em;
+}
+
+.legal-link:hover {
+    opacity: 1;
+}
+
+.legal-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #ffffff, #e1e1e1);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.legal-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+.nav-separator {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+}
+
+.legal-info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.02em;
+}
+
+.legal-item strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.separator {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 1.2rem;
+    line-height: 0;
+}
+
+.copyright p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 @keyframes fadeInUp {
@@ -383,9 +480,31 @@ const currentYear = new Date().getFullYear();
         justify-content: center;
     }
 
+    .footer-legal-nav {
+        flex-direction: column;
+        gap: 0.8rem;
+        margin-bottom: 2rem;
+    }
+
+    .nav-separator {
+        display: none;
+    }
+
+    .legal-link {
+        font-size: 1rem;
+    }
+
+    .legal-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .separator {
+        display: none;
+    }
+
     .footer-bottom {
-        font-size: 0.8rem;
-        padding: 1rem 1rem;
+        padding: 1.5rem 1rem;
     }
 
     .about-section {

@@ -37,6 +37,8 @@ export const useUserStore = defineStore('user', () => {
   const API_URL = import.meta.env.VITE_API_URL
 
   async function fetchUserProfile(userId: string) {
+    console.time('fetchUserProfile')
+    console.log('[Store] Iniciando busca de perfil no NestJS...')
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -75,6 +77,8 @@ export const useUserStore = defineStore('user', () => {
 
     isAuthenticated.value = true
     firstName.value = user.value.nome.split(' ')[0]
+    console.log('[Store] Perfil carregado com sucesso!')
+    console.timeEnd('fetchUserProfile')
   }
 
   async function register(payload: {
@@ -232,37 +236,66 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function loadUserSession() {
+    console.log('[Store] loadUserSession chamado')
+    const params = new URLSearchParams(window.location.search)
+    const isSocialLoginCallback =
+      (window.location.hash && window.location.hash.includes('access_token')) || params.has('code')
+
+    console.log('[Store] É retorno de login social?', isSocialLoginCallback)
+
     isLoading.value = true
+
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession()
 
       if (session) {
+        console.log('[Store] Sessão Supabase encontrada. Buscando dados...')
         await fetchUserProfile(session.user.id)
-
         await checkCartTransfer()
+        isLoading.value = false
+        console.log('[Store] Dados carregados. isLoading = false')
       } else {
-        user.value = null
-        isAuthenticated.value = false
-        firstName.value = 'Meu Perfil'
+        if (isSocialLoginCallback) {
+          console.log('[Store] Sem sessão, mas é Callback Social. Mantendo isLoading = true')
+        } else {
+          console.log('[Store] Sem sessão e sem callback. Usuário deslogado.')
+          user.value = null
+          isAuthenticated.value = false
+          firstName.value = 'Meu Perfil'
+          isLoading.value = false
+        }
       }
     } catch (error) {
-      console.error('Erro ao carregar sessão:', error)
-    } finally {
+      console.error('[Store] Erro crítico:', error)
       isLoading.value = false
     }
   }
 
-  supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
-      if (!user.value) loadUserSession()
+      console.log(`[Supabase Auth Event] ${event}`)
+      if (!user.value) {
+        console.log('[Auth Change] Login detectado, iniciando fetchUserProfile...')
+        try {
+          await fetchUserProfile(session.user.id)
+          await checkCartTransfer()
+        } catch (e) {
+          console.error(e)
+        } finally {
+          console.log('[Auth Change] Finalizado. isLoading = false')
+          isLoading.value = false
+        }
+      }
     } else if (event === 'SIGNED_OUT') {
       user.value = null
       isAuthenticated.value = false
+      isLoading.value = false
     }
   })
 
+  // Inicia tudo
   loadUserSession()
 
   return {
