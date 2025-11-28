@@ -14,6 +14,7 @@ import LoginRegisterView from '../views/LoginRegisterView.vue'
 import UpdatePasswordView from '../views/UpdatePasswordView.vue'
 import PrivacyPolicyView from '../views/PrivacyPolicyView.vue'
 import DataDeletionView from '../views/DataDeletionView.vue'
+import TermsView from '../views/TermsView.vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
 
@@ -134,6 +135,11 @@ const router = createRouter({
     {
       path: '/exclusao-dados',
       component: DataDeletionView,
+    },
+    {
+      path: '/termos',
+      name: 'termos',
+      component: TermsView,
     },
   ],
 })

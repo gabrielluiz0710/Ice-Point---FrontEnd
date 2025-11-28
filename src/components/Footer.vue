@@ -91,6 +91,8 @@ const currentYear = new Date().getFullYear();
                 <RouterLink to="/politica-privacidade" class="legal-link">Política de Privacidade</RouterLink>
                 <span class="nav-separator">•</span>
                 <RouterLink to="/exclusao-dados" class="legal-link">Exclusão de Dados</RouterLink>
+                <span class="nav-separator">•</span>
+                <RouterLink to="/termos" class="legal-link">Termos de Serviço</RouterLink>
             </nav>
 
             <div class="legal-info">
