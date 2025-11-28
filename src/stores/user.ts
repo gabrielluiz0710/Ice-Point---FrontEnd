@@ -36,49 +36,64 @@ export const useUserStore = defineStore('user', () => {
 
   const API_URL = import.meta.env.VITE_API_URL
 
+  function forceLogout() {
+    console.warn('[Store] Forçando logout por erro crítico.')
+    supabase.auth.signOut()
+    user.value = null
+    isAuthenticated.value = false
+    firstName.value = 'Meu Perfil'
+    isLoading.value = false
+    router.push('/login')
+  }
+
   async function fetchUserProfile(userId: string) {
     console.time('fetchUserProfile')
     console.log('[Store] Iniciando busca de perfil no NestJS...')
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    const token = session?.access_token
 
-    if (!token) throw new Error('Token de acesso não encontrado.')
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const token = session?.access_token
 
-    const response = await fetch(`${API_URL}/users/profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
+      if (!token) throw new Error('Token de acesso não encontrado.')
 
-    if (!response.ok) {
-      throw new Error('Falha ao buscar perfil do NestJS: ' + response.statusText)
+      const response = await fetch(`${API_URL}/users/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Sessão expirada no backend.')
+        }
+        throw new Error('Falha ao buscar perfil do NestJS: ' + response.statusText)
+      }
+
+      const responseBody = await response.json()
+      const userData = responseBody.user
+
+      if (!userData) throw new Error('Dados vazios na resposta.')
+
+      user.value = {
+        id: userData.userId,
+        email: userData.email,
+        nome: userData.nome,
+        tipo: userData.tipo,
+        phone: userData.phone || '',
+        cpf: userData.cpf || '',
+        birthDate: userData.birthDate || '',
+        addresses: userData.addresses || [],
+      } as UserProfile
+
+      isAuthenticated.value = true
+      firstName.value = user.value.nome.split(' ')[0]
+      console.log('[Store] Perfil carregado com sucesso!')
+    } catch (error) {
+      console.error('[Store] Erro ao carregar perfil:', error)
+      forceLogout()
+    } finally {
+      console.timeEnd('fetchUserProfile')
     }
-
-    const responseBody = await response.json()
-
-    const userData = responseBody.user
-
-    if (!userData) {
-      throw new Error('Dados de usuário não encontrados na resposta do backend.')
-    }
-
-    user.value = {
-      id: userData.userId,
-      email: userData.email,
-      nome: userData.nome,
-      tipo: userData.tipo,
-      phone: userData.phone || '',
-      cpf: userData.cpf || '',
-      birthDate: userData.birthDate || '',
-      addresses: userData.addresses || [],
-    } as UserProfile
-
-    isAuthenticated.value = true
-    firstName.value = user.value.nome.split(' ')[0]
-    console.log('[Store] Perfil carregado com sucesso!')
-    console.timeEnd('fetchUserProfile')
   }
 
   async function register(payload: {
@@ -241,35 +256,37 @@ export const useUserStore = defineStore('user', () => {
     const isSocialLoginCallback =
       (window.location.hash && window.location.hash.includes('access_token')) || params.has('code')
 
-    console.log('[Store] É retorno de login social?', isSocialLoginCallback)
-
     isLoading.value = true
 
     try {
       const {
         data: { session },
+        error,
       } = await supabase.auth.getSession()
+
+      if (error) throw error
 
       if (session) {
         console.log('[Store] Sessão Supabase encontrada. Buscando dados...')
         await fetchUserProfile(session.user.id)
-        await checkCartTransfer()
+
+        if (user.value) {
+          await checkCartTransfer()
+        }
+
         isLoading.value = false
-        console.log('[Store] Dados carregados. isLoading = false')
       } else {
         if (isSocialLoginCallback) {
-          console.log('[Store] Sem sessão, mas é Callback Social. Mantendo isLoading = true')
+          console.log('[Store] Callback Social. Aguardando...')
         } else {
-          console.log('[Store] Sem sessão e sem callback. Usuário deslogado.')
           user.value = null
           isAuthenticated.value = false
-          firstName.value = 'Meu Perfil'
           isLoading.value = false
         }
       }
     } catch (error) {
-      console.error('[Store] Erro crítico:', error)
-      isLoading.value = false
+      console.error('[Store] Erro crítico na sessão:', error)
+      forceLogout()
     }
   }
 

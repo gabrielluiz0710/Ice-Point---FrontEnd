@@ -15,6 +15,7 @@ import UpdatePasswordView from '../views/UpdatePasswordView.vue'
 import PrivacyPolicyView from '../views/PrivacyPolicyView.vue'
 import DataDeletionView from '../views/DataDeletionView.vue'
 import TermsView from '../views/TermsView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
 
@@ -140,6 +141,11 @@ const router = createRouter({
       path: '/termos',
       name: 'termos',
       component: TermsView,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
     },
   ],
 })

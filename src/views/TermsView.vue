@@ -95,37 +95,28 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* --- ESTRUTURA --- */
-
 .page-wrapper {
     width: 100%;
-    /* Garante altura mínima mas cresce com o conteúdo */
     min-height: calc(100vh - 70px);
     position: relative;
     padding: 4rem 1.5rem;
     font-family: 'Fredoka', sans-serif;
     box-sizing: border-box;
-    /* A COR DE FUNDO VEM AQUI AGORA: Garante que preencha tudo ao scrollar */
     background-color: #f8fafc;
     overflow: hidden;
-    /* Corta qualquer blob que tente vazar lateralmente */
 }
 
-/* --- DECORAÇÃO (BACKGROUND) --- */
 .background-decorations {
-    /* Mudança para Absolute: Acompanha a altura do pai (.page-wrapper) */
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    /* Cobre toda a altura do scroll */
     z-index: 0;
     pointer-events: none;
     overflow: hidden;
 }
 
-/* Blobs */
 .blob {
     position: absolute;
     border-radius: 50%;
@@ -134,7 +125,6 @@ onMounted(() => {
     animation: float 10s infinite ease-in-out;
 }
 
-/* --- POSICIONAMENTO DOS BLOBS (Espalhados pela página) --- */
 .blob-1 {
     top: -5%;
     left: -10%;
@@ -145,7 +135,6 @@ onMounted(() => {
 }
 
 .blob-2 {
-    /* Fixado em relação à porcentagem da página, não da tela */
     top: 40%;
     right: -10%;
     width: 400px;
@@ -185,7 +174,6 @@ onMounted(() => {
     }
 }
 
-/* --- CONTEÚDO --- */
 .content-container {
     position: relative;
     z-index: 1;
@@ -193,7 +181,6 @@ onMounted(() => {
     margin: 0 auto;
 }
 
-/* --- ESTILO DOS ELEMENTOS (Mantido idêntico) --- */
 .policy-header {
     text-align: center;
     margin-bottom: 4rem;

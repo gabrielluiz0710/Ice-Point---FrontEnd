@@ -115,7 +115,6 @@ function logout() {
 </template>
 
 <style scoped>
-/* Mantenha todo o seu CSS igual, ele estava perfeito */
 @keyframes fadeInUp {
     from {
         opacity: 0;
