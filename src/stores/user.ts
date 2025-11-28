@@ -7,13 +7,13 @@ import router from '@/router'
 
 interface Address {
   id?: number
-  zip: string // Backend manda 'zip'
-  street: string // Backend manda 'street'
-  number: string // Backend manda 'number'
-  complement?: string // Backend manda 'complement'
-  neighborhood: string // Backend manda 'neighborhood'
-  city: string // Backend manda 'city'
-  state: string // Backend manda 'state'
+  zip: string
+  street: string
+  number: string
+  complement?: string
+  neighborhood: string
+  city: string
+  state: string
   principal: boolean
 }
 

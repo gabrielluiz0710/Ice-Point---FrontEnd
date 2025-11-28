@@ -110,7 +110,7 @@ onUnmounted(() => {
                     Cada sorvete que servimos é um pedaço do nosso sonho. Adoraríamos compartilhar essa alegria com
                     você.
                 </p>
-                <a href="/cardapio" class="cta-final-button">Conheça Nossos Sabores</a>
+                <a href="/produtos" class="cta-final-button">Conheça Nossos Sabores</a>
             </div>
         </section>
 

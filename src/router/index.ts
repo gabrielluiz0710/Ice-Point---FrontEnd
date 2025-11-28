@@ -12,6 +12,8 @@ import ProfileView from '../views/ProfileView.vue'
 import OrderDetailsView from '../views/OrderDetailsView.vue'
 import LoginRegisterView from '../views/LoginRegisterView.vue'
 import UpdatePasswordView from '../views/UpdatePasswordView.vue'
+import PrivacyPolicyView from '../views/PrivacyPolicyView.vue'
+import DataDeletionView from '../views/DataDeletionView.vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
 
@@ -108,6 +110,14 @@ const router = createRouter({
       path: '/atualizar-senha',
       name: 'UpdatePassword',
       component: UpdatePasswordView,
+    },
+    {
+      path: '/politica-privacidade',
+      component: PrivacyPolicyView,
+    },
+    {
+      path: '/exclusao-dados',
+      component: DataDeletionView,
     },
   ],
 })
