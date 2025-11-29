@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { supabase } from '@/service/supabase'
-import type { Provider } from '@supabase/supabase-js'
 import { useCartStore } from './cart'
 import router from '@/router'
 
@@ -34,7 +33,16 @@ export const useUserStore = defineStore('user', () => {
   const isLoading = ref(true)
   const firstName = ref('')
 
+  const isFetchingProfile = ref(false)
+
   const API_URL = import.meta.env.VITE_API_URL
+
+  function resetState() {
+    user.value = null
+    isAuthenticated.value = false
+    firstName.value = 'Meu Perfil'
+    isFetchingProfile.value = false
+  }
 
   function forceLogout() {
     console.warn('[Store] Forçando logout por erro crítico.')
@@ -47,32 +55,43 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function fetchUserProfile(userId: string) {
-    console.time('fetchUserProfile')
+    console.log('[Store] Iniciando busca de perfil no NestJS...')
+
+    if (isFetchingProfile.value) {
+      console.log('[Store] fetchUserProfile já está em andamento. Abortando duplicata.')
+      return
+    }
+
+    isFetchingProfile.value = true
+
+    try {
+      console.time('fetchUserProfile')
+    } catch {}
+
     console.log('[Store] Iniciando busca de perfil no NestJS...')
 
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession()
-      const token = session?.access_token
 
-      if (!token) throw new Error('Token de acesso não encontrado.')
+      if (!session?.access_token) {
+        throw new Error('Sessão perdida antes do fetch.')
+      }
 
       const response = await fetch(`${API_URL}/users/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       })
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Sessão expirada no backend.')
-        }
-        throw new Error('Falha ao buscar perfil do NestJS: ' + response.statusText)
+        if (response.status === 401) throw new Error('401 Unauthorized')
+        throw new Error('Falha API: ' + response.statusText)
       }
 
       const responseBody = await response.json()
       const userData = responseBody.user
 
-      if (!userData) throw new Error('Dados vazios na resposta.')
+      if (!userData) throw new Error('Dados de usuário vazios.')
 
       user.value = {
         id: userData.userId,
@@ -89,10 +108,13 @@ export const useUserStore = defineStore('user', () => {
       firstName.value = user.value.nome.split(' ')[0]
       console.log('[Store] Perfil carregado com sucesso!')
     } catch (error) {
-      console.error('[Store] Erro ao carregar perfil:', error)
+      console.error('[Store] Erro fetchUserProfile:', error)
       forceLogout()
     } finally {
-      console.timeEnd('fetchUserProfile')
+      isFetchingProfile.value = false
+      try {
+        console.timeEnd('fetchUserProfile')
+      } catch {}
     }
   }
 
@@ -209,11 +231,16 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function logout() {
-    await supabase.auth.signOut()
-    user.value = null
-    isAuthenticated.value = false
-    firstName.value = 'Meu Perfil'
-    router.push('/')
+    isLoading.value = true
+    try {
+      await supabase.auth.signOut()
+    } catch (e) {
+      console.error('Erro no signout do supabase', e)
+    } finally {
+      resetState()
+      isLoading.value = false
+      router.push('/')
+    }
   }
 
   async function checkCartTransfer() {
@@ -252,6 +279,13 @@ export const useUserStore = defineStore('user', () => {
 
   async function loadUserSession() {
     console.log('[Store] loadUserSession chamado')
+
+    if (isAuthenticated.value && user.value) {
+      console.log('[Store] Sessão já carregada na memória. Pulando.')
+      isLoading.value = false
+      return
+    }
+
     const params = new URLSearchParams(window.location.search)
     const isSocialLoginCallback =
       (window.location.hash && window.location.hash.includes('access_token')) || params.has('code')
@@ -268,6 +302,7 @@ export const useUserStore = defineStore('user', () => {
 
       if (session) {
         console.log('[Store] Sessão Supabase encontrada. Buscando dados...')
+
         await fetchUserProfile(session.user.id)
 
         if (user.value) {
@@ -277,7 +312,9 @@ export const useUserStore = defineStore('user', () => {
         isLoading.value = false
       } else {
         if (isSocialLoginCallback) {
-          console.log('[Store] Callback Social. Aguardando...')
+          console.log(
+            '[Store] Callback Social detectado. Mantendo Loading true enquanto o Supabase processa...',
+          )
         } else {
           user.value = null
           isAuthenticated.value = false
@@ -293,26 +330,31 @@ export const useUserStore = defineStore('user', () => {
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       console.log(`[Supabase Auth Event] ${event}`)
-      if (!user.value) {
-        console.log('[Auth Change] Login detectado, iniciando fetchUserProfile...')
+
+      if (!user.value && !isFetchingProfile.value) {
+        console.log('[Auth Change] Login detectado e memória vazia. Iniciando fetch...')
         try {
           await fetchUserProfile(session.user.id)
-          await checkCartTransfer()
+          if (user.value) await checkCartTransfer()
         } catch (e) {
           console.error(e)
         } finally {
-          console.log('[Auth Change] Finalizado. isLoading = false')
+          console.log('[Auth Change] Finalizado.')
           isLoading.value = false
         }
+      } else {
+        console.log('[Auth Change] Ignorado: Usuário já carregado ou busca em andamento.')
       }
     } else if (event === 'SIGNED_OUT') {
+      console.log(`[Supabase Auth Event] ${event}`)
       user.value = null
       isAuthenticated.value = false
+      firstName.value = 'Meu Perfil'
       isLoading.value = false
+      router.push('/login')
     }
   })
 
-  // Inicia tudo
   loadUserSession()
 
   return {
