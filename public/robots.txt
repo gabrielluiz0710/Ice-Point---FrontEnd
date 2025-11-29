@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /perfil
+Disallow: /carrinho
+Disallow: /checkout
+Disallow: /pedido-confirmado
+Disallow: /login
+Disallow: /atualizar-senha
+
+Sitemap: https://www.icepoint.com.br/sitemap.xml
