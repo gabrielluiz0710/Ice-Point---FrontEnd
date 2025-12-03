@@ -6,7 +6,8 @@ import {
     faBoxOpen,
     faKey,
     faSignOutAlt,
-    faAward
+    faAward,
+    faChartLine
 } from '@fortawesome/free-solid-svg-icons'
 import { useUserStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
@@ -40,6 +41,11 @@ const activeComponent = computed(() => {
     }
 })
 
+const isAdminOrStaff = computed(() => {
+    const role = userStore.user?.tipo
+    return role === 'ADMIN' || role === 'FUNCIONARIO'
+})
+
 onMounted(() => {
     window.scrollTo(0, 0);
     console.log('[ProfileView] Montado! isLoading inicial:', isLoading.value);
@@ -58,7 +64,7 @@ function logout() {
 
 <template>
     <div class="profile-view">
-        <div v-if="isLoading" class="profile-grid">
+        <div v-if="isLoading || !userStore.user" class="profile-grid">
             <aside class="profile-sidebar skeleton-sidebar">
                 <div class="user-greeting">
                     <div class="skeleton-box avatar-skeleton"></div>
@@ -101,10 +107,17 @@ function logout() {
                         <span>{{ item.label }}</span>
                     </button>
                 </nav>
-                <button class="nav-item logout-btn" @click="logout">
-                    <font-awesome-icon :icon="faSignOutAlt" class="nav-icon" />
-                    <span>Sair da Conta</span>
-                </button>
+                <div class="sidebar-footer">
+                    <RouterLink v-if="isAdminOrStaff" to="/painel-controle" class="admin-btn">
+                        <font-awesome-icon :icon="faChartLine" />
+                        <span>Painel Administrativo</span>
+                    </RouterLink>
+
+                    <button class="nav-item logout-btn" @click="logout">
+                        <font-awesome-icon :icon="faSignOutAlt" class="nav-icon" />
+                        <span>Sair da Conta</span>
+                    </button>
+                </div>
             </aside>
 
             <main class="profile-content">
@@ -349,6 +362,79 @@ function logout() {
     height: 50px;
     width: 150px;
     border-radius: 12px;
+}
+
+.role-badge {
+    display: inline-block;
+    background-color: #e0f2fe;
+    color: #0284c7;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.admin-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.9rem 1rem;
+    color: var(--c-text);
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    margin-bottom: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid transparent;
+}
+
+.admin-btn:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background-color: #1e293b;
+    transition: left 0.4s ease-out;
+    z-index: 0;
+}
+
+.admin-btn span,
+.admin-btn svg {
+    position: relative;
+    z-index: 1;
+}
+
+.admin-btn:hover {
+    transform: translateX(10px);
+    color: white;
+    box-shadow: 0 5px 15px rgba(30, 41, 59, 0.3);
+}
+
+.admin-btn:hover:before {
+    left: 0;
+}
+
+.logout-btn {
+    margin-top: 0;
+    padding: 0.8rem 1rem;
+    width: 100%;
 }
 
 @media (max-width: 992px) {

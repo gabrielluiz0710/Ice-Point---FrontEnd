@@ -18,6 +18,8 @@ import TermsView from '../views/TermsView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
+import AdminLayout from '@/layouts/AdminLayout.vue'
+import AdminDashboard from '@/views/admin/DashboardView.vue'
 
 const authGuard = async (to: any, from: any, next: any) => {
   const userStore = useUserStore()
@@ -54,6 +56,30 @@ const authGuard = async (to: any, from: any, next: any) => {
       console.log('[Router] Sem sessão. Redirecionando para login.')
       next('/login')
     }
+  }
+}
+
+const adminGuard = async (to: any, from: any, next: any) => {
+  const userStore = useUserStore()
+
+  if (!userStore.user) {
+    await userStore.loadUserSession()
+  }
+
+  if (!userStore.isAuthenticated || !userStore.user) {
+    next('/login')
+    return
+  }
+
+  const role = userStore.user.tipo
+  if (role === 'FUNCIONARIO' || role === 'ADMIN') {
+    next()
+  } else {
+    next({
+      name: 'not-found',
+      params: { pathMatch: to.path.substring(1).split('/') },
+      replace: true,
+    })
   }
 }
 
@@ -146,6 +172,18 @@ const router = createRouter({
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: NotFoundView,
+    },
+    {
+      path: '/painel-controle',
+      component: AdminLayout,
+      beforeEnter: adminGuard,
+      children: [
+        {
+          path: '',
+          name: 'admin-dashboard',
+          component: AdminDashboard,
+        },
+      ],
     },
   ],
 })

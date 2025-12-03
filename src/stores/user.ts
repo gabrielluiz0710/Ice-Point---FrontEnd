@@ -63,6 +63,7 @@ export const useUserStore = defineStore('user', () => {
     }
 
     isFetchingProfile.value = true
+    isLoading.value = true
 
     try {
       console.time('fetchUserProfile')
@@ -112,6 +113,7 @@ export const useUserStore = defineStore('user', () => {
       forceLogout()
     } finally {
       isFetchingProfile.value = false
+      isLoading.value = false
       try {
         console.timeEnd('fetchUserProfile')
       } catch {}
@@ -209,8 +211,16 @@ export const useUserStore = defineStore('user', () => {
 
     await cartStore.fetchUserCart()
 
-    if (router.currentRoute.value.path === '/login') {
-      router.push('/perfil')
+    const role = user.value?.tipo
+    console.log('[Login] Papel detectado:', role)
+
+    // 3. Redireciona
+    if (role === 'ADMIN' || role === 'FUNCIONARIO') {
+      router.push('/painel-controle')
+    } else {
+      if (router.currentRoute.value.path === '/login') {
+        router.push('/perfil')
+      }
     }
   }
 
