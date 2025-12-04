@@ -154,7 +154,6 @@ onMounted(() => {
         <header class="view-header">
             <div class="header-content">
                 <h1 class="title">
-                    <font-awesome-icon :icon="faIceCream" class="title-icon" />
                     Gerenciar Produtos
                 </h1>
                 <p class="subtitle">Organize seu catálogo, preços e estoque.</p>
@@ -200,10 +199,10 @@ onMounted(() => {
 
                     <div class="products-grid">
                         <div v-for="product in items" :key="product.id" class="product-card">
+
                             <div class="card-image-wrapper">
                                 <img v-if="product.imagemCapa" :src="product.imagemCapa" :alt="product.nome"
                                     loading="lazy" class="product-img" />
-
                                 <div v-else class="placeholder-icon">
                                     <font-awesome-icon :icon="faIceCream" />
                                 </div>
@@ -212,7 +211,7 @@ onMounted(() => {
                                     {{ product.disponivel ? 'Ativo' : 'Indisponível' }}
                                 </span>
 
-                                <div class="card-actions-overlay">
+                                <div class="card-actions-overlay desktop-only">
                                     <button class="action-btn edit" @click="openEditModal(product)" title="Editar">
                                         <font-awesome-icon :icon="faEdit" />
                                     </button>
@@ -224,8 +223,18 @@ onMounted(() => {
 
                             <div class="card-info">
                                 <h3 class="product-name" :title="product.nome">{{ product.nome }}</h3>
+
                                 <div class="product-meta">
                                     <span class="product-price">{{ formatCurrency(product.preco_unitario) }}</span>
+
+                                    <div class="mobile-actions">
+                                        <button class="mobile-btn edit" @click="openEditModal(product)">
+                                            <font-awesome-icon :icon="faEdit" />
+                                        </button>
+                                        <button class="mobile-btn delete" @click="confirmDelete(product)">
+                                            <font-awesome-icon :icon="faTrashAlt" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -312,7 +321,6 @@ onMounted(() => {
 
 .search-box {
     position: relative;
-    max-width: 400px;
 }
 
 .search-icon {
@@ -598,9 +606,18 @@ onMounted(() => {
     }
 }
 
+.mobile-actions {
+    display: none;
+}
+
+.desktop-only {
+    display: flex;
+}
+
 @media (max-width: 768px) {
     .products-grid {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
     }
 
     .view-header {
@@ -611,6 +628,76 @@ onMounted(() => {
     .btn-create {
         width: 100%;
         justify-content: center;
+    }
+
+    .card-actions-overlay.desktop-only {
+        display: none !important;
+    }
+
+    .product-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .product-card:hover .product-img {
+        transform: none;
+    }
+
+    .product-meta {
+        align-items: center;
+        margin-top: 0.5rem;
+    }
+
+    .mobile-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .mobile-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .mobile-btn.edit {
+        background-color: #F0F9FF;
+        color: var(--primary);
+        border: 1px solid rgba(var(--primary-rgb), 0.1);
+    }
+
+    .mobile-btn.edit:active {
+        background-color: var(--primary);
+        color: white;
+    }
+
+    .mobile-btn.delete {
+        background-color: #FEF2F2;
+        color: #EF4444;
+    }
+
+    .mobile-btn.delete:active {
+        background-color: #EF4444;
+        color: white;
+    }
+
+    .card-info {
+        padding: 0.8rem;
+    }
+
+    .product-name {
+        font-size: 0.95rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .product-price {
+        font-size: 1rem;
     }
 }
 </style>

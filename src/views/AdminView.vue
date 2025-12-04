@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterView, useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import {
@@ -21,15 +21,42 @@ const router = useRouter()
 const route = useRoute()
 
 const isCollapsed = ref(false)
+const isMobile = ref(false)
+
+const checkScreenSize = () => {
+    isMobile.value = window.innerWidth <= 768
+}
+
+onMounted(() => {
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', checkScreenSize)
+})
 
 const toggleSidebar = () => {
     isCollapsed.value = !isCollapsed.value
+}
+
+const closeSidebar = () => {
+    if (isMobile.value) {
+        isCollapsed.value = false
+    }
 }
 
 const logout = () => {
     userStore.logout()
     router.push('/login')
 }
+
+const toggleIcon = computed(() => {
+    if (isMobile.value) {
+        return faChevronLeft
+    }
+    return isCollapsed.value ? faChevronRight : faChevronLeft
+})
 
 const menuItems = computed(() => [
     { to: '/painel-controle', icon: faChartLine, label: 'Dashboard', exact: true },
@@ -48,19 +75,22 @@ const isActive = (path: string, exact: boolean = false) => {
 
 <template>
     <div class="admin-container" :class="{ 'collapsed': isCollapsed }">
+
+        <div class="sidebar-overlay" @click="closeSidebar"></div>
+
         <aside class="admin-sidebar">
             <div class="sidebar-header">
                 <div class="logo-container">
                     <img src="/images/icon.svg" alt="Logo" class="sidebar-logo" />
                 </div>
                 <transition name="fade">
-                    <h2 v-if="!isCollapsed" class="brand-name">Ice Point Sorveteria</h2>
+                    <h2 v-if="!isCollapsed || isMobile" class="brand-name">Ice Point Sorveteria</h2>
                 </transition>
             </div>
 
             <nav class="admin-nav custom-scrollbar">
                 <RouterLink v-for="item in menuItems" :key="item.to" :to="item.to" class="nav-item"
-                    :class="{ 'active': isActive(item.to, item.exact) }">
+                    :class="{ 'active': isActive(item.to, item.exact) }" @click="closeSidebar">
                     <div class="icon-wrapper">
                         <font-awesome-icon :icon="item.icon" />
                     </div>
@@ -83,7 +113,7 @@ const isActive = (path: string, exact: boolean = false) => {
                         {{ userStore.user?.nome?.charAt(0).toUpperCase() }}
                     </div>
                     <transition name="fade">
-                        <div v-if="!isCollapsed" class="user-details">
+                        <div v-if="!isCollapsed || isMobile" class="user-details">
                             <span class="user-name">{{ userStore.user?.nome?.split(' ')[0] }}</span>
                             <span class="user-role">{{ userStore.user?.tipo }}</span>
                         </div>
@@ -92,7 +122,7 @@ const isActive = (path: string, exact: boolean = false) => {
 
                 <div class="footer-actions">
                     <button class="footer-btn toggle-btn" @click="toggleSidebar">
-                        <font-awesome-icon :icon="isCollapsed ? faChevronRight : faChevronLeft" />
+                        <font-awesome-icon :icon="toggleIcon" />
                     </button>
                     <button class="footer-btn logout-btn" @click="logout">
                         <font-awesome-icon :icon="faSignOutAlt" />
@@ -436,6 +466,19 @@ const isActive = (path: string, exact: boolean = false) => {
     transform: scale(0.98);
 }
 
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 15;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.3s;
+}
+
 @media (max-width: 768px) {
     .admin-sidebar {
         position: fixed;
@@ -446,6 +489,10 @@ const isActive = (path: string, exact: boolean = false) => {
     .admin-container.collapsed .admin-sidebar {
         transform: translateX(0);
         width: var(--sidebar-width);
+    }
+
+    .admin-container.collapsed .sidebar-overlay {
+        display: block;
     }
 
     .admin-container.collapsed .nav-label,

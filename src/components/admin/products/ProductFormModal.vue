@@ -992,4 +992,120 @@ const handleSubmit = () => {
 .modal-fade-leave-to .modal-container {
     transform: scale(0.95) translateY(20px);
 }
+
+@media (max-width: 768px) {
+
+    .modal-container {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        border: none;
+    }
+
+    .modal-body {
+        padding: 1.25rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .full-width {
+        grid-column: span 1;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.9rem;
+        font-size: 1rem;
+    }
+
+    .nutri-header-row {
+        display: none;
+    }
+
+    .nutri-table {
+        padding: 0;
+        margin-top: 1rem;
+    }
+
+    .nutri-data-row {
+        flex-direction: column;
+        align-items: stretch;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.2rem 1rem 1rem 1rem;
+        margin-bottom: 1.2rem;
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+        gap: 0.8rem;
+        position: relative;
+    }
+
+    .nutri-input,
+    .nutri-input.value {
+        width: 100%;
+        text-align: left;
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 0.8rem;
+        border-radius: 8px;
+        color: var(--text-main);
+    }
+
+    .col-qtd,
+    .input-wrapper:nth-child(2) {
+        width: 100%;
+    }
+
+    .col-action {
+        width: auto;
+        position: static;
+    }
+
+    .btn-icon-remove {
+        position: absolute;
+        top: -10px;
+        right: -5px;
+        background: #EF4444;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        border: 2px solid white;
+        opacity: 1;
+        z-index: 5;
+    }
+
+    .btn-icon-remove:hover {
+        background: #DC2626;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+        gap: 0.8rem;
+        padding: 1rem;
+    }
+
+    .btn-save,
+    .btn-cancel {
+        width: 100%;
+        justify-content: center;
+        padding: 1rem;
+        font-size: 1rem;
+    }
+
+    .upload-area {
+        min-height: 120px;
+    }
+
+    .preview-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    }
+}
 </style>
