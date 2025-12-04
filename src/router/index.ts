@@ -18,70 +18,9 @@ import TermsView from '../views/TermsView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
-import AdminLayout from '@/layouts/AdminLayout.vue'
-import AdminDashboard from '@/views/admin/DashboardView.vue'
-
-const authGuard = async (to: any, from: any, next: any) => {
-  const userStore = useUserStore()
-  console.log('[Router] AuthGuard iniciado para:', to.path)
-
-  if (userStore.isAuthenticated && userStore.user) {
-    console.log('[Router] Usuário já autenticado na store. Permitindo.')
-    next()
-    return
-  }
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (session) {
-    console.log('[Router] Sessão Supabase existe.')
-    if (!userStore.user) {
-      console.log('[Router] Disparando loadUserSession em background (sem await)...')
-      userStore.loadUserSession().catch((err) => console.error('[Router] Erro bg load:', err))
-    }
-
-    next()
-  } else {
-    const isSocialCallback = to.hash.includes('access_token') || to.query.code
-
-    if (isSocialCallback) {
-      console.log(
-        '[Router] Detectado callback social na URL. Permitindo renderizar para processar token.',
-      )
-      userStore.loadUserSession()
-      next()
-    } else {
-      console.log('[Router] Sem sessão. Redirecionando para login.')
-      next('/login')
-    }
-  }
-}
-
-const adminGuard = async (to: any, from: any, next: any) => {
-  const userStore = useUserStore()
-
-  if (!userStore.user) {
-    await userStore.loadUserSession()
-  }
-
-  if (!userStore.isAuthenticated || !userStore.user) {
-    next('/login')
-    return
-  }
-
-  const role = userStore.user.tipo
-  if (role === 'FUNCIONARIO' || role === 'ADMIN') {
-    next()
-  } else {
-    next({
-      name: 'not-found',
-      params: { pathMatch: to.path.substring(1).split('/') },
-      replace: true,
-    })
-  }
-}
+import AdminView from '../views/AdminView.vue'
+import AdminDashboard from '../views/admin/DashboardView.vue'
+import AdminProductsView from '../views/admin/ProductsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -125,14 +64,14 @@ const router = createRouter({
       path: '/perfil',
       name: 'perfil',
       component: ProfileView,
-      beforeEnter: authGuard,
+      meta: { requiresAuth: true },
     },
     {
       path: '/perfil/pedidos/:id',
       name: 'OrderDetail',
       component: OrderDetailsView,
       props: true,
-      beforeEnter: authGuard,
+      meta: { requiresAuth: true },
     },
     {
       path: '/produtos',
@@ -149,6 +88,7 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginRegisterView,
+      meta: { requiresGuest: true },
     },
     {
       path: '/atualizar-senha',
@@ -169,23 +109,71 @@ const router = createRouter({
       component: TermsView,
     },
     {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: NotFoundView,
-    },
-    {
       path: '/painel-controle',
-      component: AdminLayout,
-      beforeEnter: adminGuard,
+      component: AdminView,
+      meta: {
+        requiresAuth: true,
+        roles: ['ADMIN', 'FUNCIONARIO'],
+      },
       children: [
         {
           path: '',
           name: 'admin-dashboard',
           component: AdminDashboard,
         },
+        {
+          path: 'produtos',
+          name: 'admin-produtos',
+          component: AdminProductsView,
+        },
       ],
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
+    },
   ],
+})
+
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore()
+
+  if (to.hash.includes('access_token') || to.query.code) {
+    console.log('[Router] Detectado callback OAuth. Permitindo passagem.')
+    return next()
+  }
+
+  if (!userStore.isReady) {
+    console.log('[Router] App iniciou ou recarregou. Verificando sessão...')
+    await userStore.initializeAuth()
+  }
+
+  const isAuthenticated = userStore.isAuthenticated
+  const userRole = userStore.user?.tipo
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    console.log('[Router] Acesso negado. Redirecionando para Login.')
+    return next({ name: 'login', query: { redirect: to.fullPath } })
+  }
+
+  if (to.meta.requiresGuest && isAuthenticated) {
+    return next({ name: 'perfil' })
+  }
+
+  if (to.meta.roles) {
+    const allowedRoles = to.meta.roles as string[]
+    if (!allowedRoles.includes(userRole || '')) {
+      console.warn(`[Router] Usuário ${userRole} tentou acessar área restrita.`)
+      return next({
+        name: 'not-found',
+        params: { pathMatch: to.path.substring(1).split('/') },
+        replace: true,
+      })
+    }
+  }
+
+  next()
 })
 
 export default router

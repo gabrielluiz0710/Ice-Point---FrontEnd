@@ -113,12 +113,16 @@ function closeModal() {
 
 async function setPrincipal(addressId: number) {
     isLoading.value = true
+
     try {
         const { data: { session } } = await userStore.supabase.auth.getSession()
+        const token = session?.access_token
         await axios.patch(`${import.meta.env.VITE_API_URL}/enderecos/${addressId}/principal`, {}, {
-            headers: { Authorization: `Bearer ${session?.access_token}` }
+            headers: { Authorization: `Bearer ${token}` }
         })
-        await userStore.fetchUserProfile(userStore.user!.id)
+        if (token) {
+            await userStore.fetchUserProfile(token)
+        }
         showSuccessToast('Endereço principal atualizado!')
     } catch (e) { console.error(e) }
     finally { isLoading.value = false }
@@ -164,7 +168,9 @@ async function handleSaveData(newData: Record<string, string>) {
                     headers: { Authorization: `Bearer ${token}` }
                 })
             }
-            await userStore.fetchUserProfile(userStore.user!.id)
+            if (token) {
+                await userStore.fetchUserProfile(token)
+            }
         }
 
         showSuccessToast('Dados atualizados com sucesso!');

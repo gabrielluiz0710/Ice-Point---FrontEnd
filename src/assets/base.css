@@ -43,9 +43,7 @@
 
   --c-azul-footer: #23b1c9;
   --c-azul-dark-footer: #198c9f;
-}
 
-:root {
   --color-background: var(--vt-c-white);
   --color-background-soft: var(--vt-c-white-soft);
   --color-background-mute: var(--vt-c-white-mute);
@@ -57,6 +55,41 @@
   --color-text: var(--vt-c-text-light-1);
 
   --section-gap: 160px;
+
+  /* PAINEL ADMIN/FUNCIONARIOS*/
+  --admin-bg-main: #f3f4f6;
+
+  --sidebar-bg: #1a1c23;
+  --sidebar-bg-darker: #13151a;
+  --sidebar-bg-hover: rgba(255, 255, 255, 0.08);
+
+  --sidebar-text: #a0aec0;
+  --sidebar-text-light: #ffffff;
+  --sidebar-text-muted: #718096;
+
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+
+  --sidebar-accent: var(--c-rosa);
+  --sidebar-accent-glow: rgba(254, 117, 143, 0.15);
+
+  --sidebar-danger: #ef4444;
+
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 70px;
+  --header-height: 64px;
+
+  --primary: #ff5e8e;
+  --primary-dark: #e04673;
+
+  --bg-card: #ffffff;
+
+  --text-main: #2d3748;
+  --text-muted: #718096;
+
+  --border-light: #e2e8f0;
+
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
