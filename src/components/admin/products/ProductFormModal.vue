@@ -993,7 +993,7 @@ const handleSubmit = () => {
     transform: scale(0.95) translateY(20px);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
 
     .modal-container {
         width: 100%;

@@ -614,7 +614,7 @@ onMounted(() => {
     display: flex;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .products-grid {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 1rem;
