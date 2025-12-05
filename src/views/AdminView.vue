@@ -377,8 +377,7 @@ const isActive = (path: string, exact: boolean = false) => {
 }
 
 .admin-container.collapsed .user-info {
-    justify-content: center;
-    padding: 0;
+    padding: 0 0 0 15px;
 }
 
 .admin-container.collapsed .footer-actions {
