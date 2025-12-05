@@ -461,7 +461,7 @@ const handleSubmit = () => {
 .modal-container {
     background: var(--bg-card);
     width: 90%;
-    max-width: 700px;
+    max-width: 992px;
     max-height: 90vh;
     border-radius: 24px;
     display: flex;
@@ -993,7 +993,7 @@ const handleSubmit = () => {
     transform: scale(0.95) translateY(20px);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 992px) {
 
     .modal-container {
         width: 100%;
