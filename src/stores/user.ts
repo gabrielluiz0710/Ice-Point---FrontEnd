@@ -209,7 +209,7 @@ export const useUserStore = defineStore('user', () => {
   async function register(payload: any) {
     isLoading.value = true
 
-    const redirectUrl = window.location.origin + '/perfil'
+    const redirectUrl = window.location.origin + '/login'
 
     const { data, error } = await supabase.auth.signUp({
       email: payload.email,

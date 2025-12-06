@@ -311,7 +311,6 @@ function logout() {
     padding: 2rem 3rem;
 }
 
-/* SKELETON CSS */
 @keyframes shimmer {
     0% {
         background-position: -200% 0;
