@@ -3,13 +3,17 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
 import { faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
+import { faCheckCircle } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 const isLoginMode = ref(true)
 const isLoading = ref(false)
 const showForgotModal = ref(false)
+const showSuccessModal = ref(false)
 
 const feedbackMsg = ref('')
 const feedbackType = ref<'success' | 'error' | ''>('')
@@ -275,7 +279,25 @@ const formatDate = (event: Event) => {
 }
 
 onMounted(() => {
-    window.scrollTo(0, 0);;
+    window.scrollTo(0, 0);
+
+    const hash = window.location.hash
+
+    // Detecta o "erro" que na verdade é sucesso de verificação
+    if (hash && hash.includes('error_code=otp_expired')) {
+        router.replace('/login') // Limpa a URL
+        isLoginMode.value = true // Garante que está na aba de Login
+        showSuccessModal.value = true // Exibe o modal bonitinho
+        return
+    }
+
+    // Erros genéricos
+    if (hash && hash.includes('error_description')) {
+        const params = new URLSearchParams(hash.substring(1))
+        const description = params.get('error_description')?.replace(/\+/g, ' ')
+        showFeedback(description || 'Link inválido ou expirado.', 'error')
+        router.replace('/login')
+    }
 });
 </script>
 
@@ -388,6 +410,25 @@ onMounted(() => {
 
                         <button @click="handleForgotPassword" :disabled="forgotLoading" class="btn-primary btn-modal">
                             {{ forgotLoading ? 'Enviando...' : 'Enviar Link' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="modal-fade">
+            <div v-if="showSuccessModal" class="modal-overlay">
+                <div class="modal-card scale-in-center success-modal">
+                    <div class="modal-body success-body">
+                        <div class="success-icon-wrapper">
+                            <font-awesome-icon :icon="faCheckCircle" class="success-icon" />
+                        </div>
+                        <h3>Email Confirmado!</h3>
+                        <p>Sua conta foi ativada com sucesso.</p>
+                        <p>Agora você já pode fazer login e aproveitar o melhor sorvete da cidade! 🍦</p>
+
+                        <button @click="showSuccessModal = false" class="btn-primary btn-modal">
+                            Fazer Login
                         </button>
                     </div>
                 </div>
@@ -813,6 +854,60 @@ onMounted(() => {
     .row-group {
         flex-direction: column;
         gap: 1.2rem;
+    }
+}
+
+.success-modal {
+    text-align: center;
+    max-width: 380px;
+}
+
+.success-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.success-body h3 {
+    color: var(--c-azul-dark);
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.success-body p {
+    color: var(--c-text);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.success-icon-wrapper {
+    margin-bottom: 10px;
+}
+
+.success-icon {
+    font-size: 4rem;
+    color: #4CAF50;
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
     }
 }
 </style>
