@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
 import { faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
+import axios from 'axios'
 
 const userStore = useUserStore()
 
@@ -24,6 +25,9 @@ const forgotEmail = ref('')
 const forgotLoading = ref(false)
 const forgotMsg = ref('')
 const forgotType = ref<'success' | 'error' | ''>('')
+
+const API_URL = import.meta.env.VITE_API_URL
+
 
 const passwordsMatch = computed(() => {
     return isLoginMode.value || password.value === confirmPassword.value
@@ -117,6 +121,38 @@ const handleAuth = async () => {
         if (isLoginMode.value) {
             await userStore.login(email.value, password.value)
         } else {
+            const { data: { session } } = await userStore.supabase.auth.getSession()
+            const token = session?.access_token
+            try {
+
+                const response = await axios.post(`${API_URL}/auth/check-email`, {
+                    email: email.value
+                });
+
+                const statusUsuario = response.data.status;
+
+                if (statusUsuario === 'confirmado') {
+                    showFeedback('Você já tem uma conta confirmada! Redirecionando...', 'error');
+                    setTimeout(() => {
+                        isLoginMode.value = true;
+                        feedbackMsg.value = '';
+                    }, 2000);
+                    isLoading.value = false;
+                    return;
+                }
+
+                if (statusUsuario === 'pendente') {
+                    showFeedback('Este email já está cadastrado, mas falta confirmar! Verifique sua caixa de entrada.', 'error');
+                    isLoading.value = false;
+                    return;
+                }
+
+            } catch (apiError) {
+                console.error('Erro ao consultar backend:', apiError);
+                // Se sua API cair, você decide: bloqueia ou deixa tentar cadastrar?
+                // Sugiro deixar passar para o supabase.auth tentar tratar
+            }
+
             const isoDate = convertDateToISO(birthDate.value)
 
             const result = await userStore.register({
@@ -136,7 +172,22 @@ const handleAuth = async () => {
         }
     } catch (error: any) {
         console.error('Erro Auth:', error)
-        const translatedMsg = translateSupabaseError(error.message || '')
+
+        const errorMsg = error.message || ''
+        const errorLower = errorMsg.toLowerCase()
+
+        if (errorLower.includes('user already registered') || errorLower.includes('email já cadastrado')) {
+            showFeedback('Este email já possui conta! Redirecionando para o login...', 'error')
+
+            setTimeout(() => {
+                isLoginMode.value = true
+                feedbackMsg.value = ''
+            }, 2000)
+
+            return
+        }
+
+        const translatedMsg = translateSupabaseError(errorMsg)
         showFeedback(translatedMsg, 'error')
     } finally {
         isLoading.value = false
