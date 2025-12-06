@@ -355,7 +355,6 @@ const handleSubmit = () => {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(4px);
     z-index: 100;
-    /* Fica acima de tudo no modal */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -376,7 +375,6 @@ const handleSubmit = () => {
 .confirm-icon {
     font-size: 2rem;
     color: #F59E0B;
-    /* Amarelo alerta */
     margin-bottom: 1rem;
 }
 

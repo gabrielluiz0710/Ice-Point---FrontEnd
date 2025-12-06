@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://cbxzgtafuzaulxhtcnzg.supabase.co'
-const supabaseAnonKey = 'sb_publishable_dsiejhppaI3hIC4MOuKVSg_uIohHvHv'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('⚠️ Faltam as variáveis de ambiente do Supabase!')
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

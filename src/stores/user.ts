@@ -25,6 +25,7 @@ interface UserProfile {
   birthDate?: string
   addresses: Address[]
   tipo: 'CLIENTE' | 'FUNCIONARIO' | 'ADMIN'
+  avatarUrl?: string
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -66,6 +67,11 @@ export const useUserStore = defineStore('user', () => {
 
       if (!userData) throw new Error('Perfil vazio retornado pela API')
 
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      const avatar = authUser?.user_metadata?.avatar_url || authUser?.user_metadata?.picture || null
+
       user.value = {
         id: userData.userId,
         email: userData.email,
@@ -75,6 +81,7 @@ export const useUserStore = defineStore('user', () => {
         cpf: userData.cpf || '',
         birthDate: userData.birthDate || '',
         addresses: userData.addresses || [],
+        avatarUrl: avatar,
       } as UserProfile
 
       isAuthenticated.value = true

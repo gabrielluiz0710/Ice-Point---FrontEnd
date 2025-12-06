@@ -93,7 +93,11 @@ function logout() {
         <div v-else class="profile-grid fade-in-content">
             <aside class="profile-sidebar">
                 <div class="user-greeting">
-                    <div class="avatar-icon">
+                    <div v-if="userStore.user.avatarUrl" class="avatar-image-container">
+                        <img :src="userStore.user.avatarUrl" alt="Foto de Perfil" class="avatar-img"
+                            referrerpolicy="no-referrer" />
+                    </div>
+                    <div v-else class="avatar-icon">
                         <font-awesome-icon :icon="faAward" />
                     </div>
                     <h2 class="greeting-title">Meu Perfil</h2>
@@ -176,6 +180,26 @@ function logout() {
     margin-bottom: 2.5rem;
     border-bottom: 1px solid #eee;
     padding-bottom: 1.5rem;
+}
+
+.avatar-image-container {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    padding: 3px;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+    overflow: hidden;
+    border: 2px solid var(--c-azul);
+}
+
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
 }
 
 .avatar-icon {

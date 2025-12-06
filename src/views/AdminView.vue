@@ -110,7 +110,11 @@ const isActive = (path: string, exact: boolean = false) => {
             <div class="sidebar-footer">
                 <div class="user-info">
                     <div class="user-avatar">
-                        {{ userStore.user?.nome?.charAt(0).toUpperCase() }}
+                        <img v-if="userStore.user?.avatarUrl" :src="userStore.user.avatarUrl" alt="Avatar"
+                            class="sidebar-avatar-img" referrerpolicy="no-referrer" />
+                        <span v-else>
+                            {{ userStore.user?.nome?.charAt(0).toUpperCase() }}
+                        </span>
                     </div>
                     <transition name="fade">
                         <div v-if="!isCollapsed || isMobile" class="user-details">
@@ -307,6 +311,29 @@ const isActive = (path: string, exact: boolean = false) => {
     margin-bottom: 1rem;
     padding: 0 0.2rem;
     white-space: nowrap;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--c-azul), var(--c-azul-dark));
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    overflow: hidden;
+    padding: 0;
+}
+
+.sidebar-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .user-avatar {
