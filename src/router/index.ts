@@ -139,8 +139,8 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
-  if (to.hash.includes('access_token') || to.query.code) {
-    console.log('[Router] Detectado callback OAuth. Permitindo passagem.')
+  if (to.hash.includes('access_token') || to.query.code || to.hash.includes('type=recovery')) {
+    console.log('[Router] Detectado token de recuperação/login. Permitindo...')
     return next()
   }
 

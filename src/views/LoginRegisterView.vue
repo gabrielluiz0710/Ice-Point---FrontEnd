@@ -161,8 +161,13 @@ const handleForgotPassword = async () => {
     forgotLoading.value = true
     forgotMsg.value = ''
 
+    const baseUrl = window.location.origin.replace(/\/$/, '')
+    const redirectUrl = `${baseUrl}/atualizar-senha`
+
+    console.log('Enviando reset para:', redirectUrl)
+
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.value, {
-        redirectTo: window.location.origin + '/atualizar-senha',
+        redirectTo: redirectUrl,
     })
 
     forgotLoading.value = false
