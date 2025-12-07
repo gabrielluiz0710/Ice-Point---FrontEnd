@@ -80,7 +80,7 @@ const router = createRouter({
       component: ProductsView,
     },
     {
-      path: '/produtos/:id',
+      path: '/produtos/:id/:slug?',
       name: 'ProdutoDetalhe',
       component: ProductDetailsView,
       props: true,

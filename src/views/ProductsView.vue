@@ -5,127 +5,16 @@ import { faLeaf, faBowlRice } from '@fortawesome/free-solid-svg-icons';
 import IconeSorvete from '../components/IconeSorvete.vue';
 import { useRouter } from 'vue-router';
 
-const faIceCream = { prefix: 'fas', iconName: 'ice-cream' };
+const API_URL = import.meta.env.VITE_API_URL;
 
-const products = ref([
-  // SORVETES
-  { id: 1, name: 'Abacaxi', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 2, name: 'Abacaxi ao Vinho', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 3, name: 'Ameixa', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 4, name: 'Amendoim', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 5, name: 'Banana', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 6, name: 'Blue Ice', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 7, name: 'Bombom', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 8, name: 'Chiclete', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 9, name: 'Chocolate', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 10, name: 'Chocolate Branco', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 11, name: 'Chocomenta', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 12, name: 'Coco', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 13, name: 'Coco Queimado', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 14, name: 'Creme', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 15, name: 'Cupuaçu', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 16, name: 'Doce de Leite', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 17, name: 'Flocos', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 18, name: 'Frutas Vermelhas', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 19, name: 'Iogurte com Maracujá', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 20, name: 'Leite Condensado', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 21, name: 'Leite Ninho', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 22, name: 'Leite Ninho Trufado', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 23, name: 'Limão', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 24, name: 'Maracujá', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 25, name: 'Milho Verde', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 26, name: 'Morango com Iogurte', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 27, name: 'Passas ao Rum', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 28, name: 'Prestígio', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 29, name: 'Sensação', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 30, name: 'Torta Alemã', category: 'sorvetes', type: 'icon', icon: faIceCream },
-  { id: 31, name: 'Uva', category: 'sorvetes', type: 'icon', icon: faIceCream },
+const products = ref<any[]>([]);
+const categories = ref<any[]>([]);
+const isLoading = ref(true);
+const searchTerm = ref('');
+const selectedCategoryId = ref<string | number>('all');
+const showScrollToFiltersBtn = ref(false);
 
-  // PICOLÉ DE LEITE
-  { id: 32, name: 'Açaí', category: 'picole-leite', type: 'image', src: '/images/picole-leite/acai.png' },
-  { id: 33, name: 'Abacate', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 34, name: 'Abacaxi Suíço', category: 'picole-leite', type: 'image', src: '/images/picole-leite/abacaxisuico.png' },
-  { id: 35, name: 'Ameixa', category: 'picole-leite', type: 'image', src: '/images/picole-leite/ameixa.png' },
-  { id: 36, name: 'Amendoim', category: 'picole-leite', type: 'image', src: '/images/picole-leite/amendoim.png' },
-  { id: 37, name: 'Banana', category: 'picole-leite', type: 'image', src: '/images/picole-leite/banana.png' },
-  { id: 38, name: 'Blue Ice', category: 'picole-leite', type: 'image', src: '/images/picole-leite/blueice.png' },
-  { id: 39, name: 'Bombom', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 40, name: 'Cajá', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 41, name: 'Chiclete', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 42, name: 'Chocolate', category: 'picole-leite', type: 'image', src: '/images/picole-leite/chocolate.png' },
-  { id: 43, name: 'Chocolate Branco', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 44, name: 'Chocomenta', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 45, name: 'Churros', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 46, name: 'Coalhada', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 47, name: 'Coco', category: 'picole-leite', type: 'image', src: '/images/picole-leite/coco.png' },
-  { id: 48, name: 'Coco Queimado', category: 'picole-leite', type: 'image', src: '/images/picole-leite/cocoqueimado.png' },
-  { id: 49, name: 'Creme', category: 'picole-leite', type: 'image', src: '/images/picole-leite/creme.png' },
-  { id: 50, name: 'Cupuaçu', category: 'picole-leite', type: 'image', src: '/images/picole-leite/cupuacu.png' },
-  { id: 51, name: 'Doce de Leite', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 52, name: 'Flocos', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 53, name: 'Goiaba', category: 'picole-leite', type: 'image', src: '/images/picole-leite/goiaba.png' },
-  { id: 54, name: 'Iogurte com Morango', category: 'picole-leite', type: 'image', src: '/images/picole-leite/iogurtemorango.png' },
-  { id: 55, name: 'Kiwi', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 56, name: 'Leite Condensado', category: 'picole-leite', type: 'image', src: '/images/picole-leite/leitecondensado.png' },
-  { id: 57, name: 'Leite Ninho', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 58, name: 'Limão Suíço', category: 'picole-leite', type: 'image', src: '/images/picole-leite/limaosuico.png' },
-  { id: 59, name: 'Maracujá', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 60, name: 'Milho Verde', category: 'picole-leite', type: 'image', src: '/images/picole-leite/milho.png' },
-  { id: 61, name: 'Morango', category: 'picole-leite', type: 'image', src: '/images/picole-leite/morangoleite.png' },
-  { id: 62, name: 'Nata', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 63, name: 'Queijo', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 64, name: 'Uva ao Leite', category: 'picole-leite', type: 'icon', iconClass: 'custom-popsicle' },
-
-  // PICOLÉ DE FRUTA
-  { id: 65, name: 'Abacaxi', category: 'picole-fruta', type: 'image', src: '/images/picole-fruta/abacaxi.png' },
-  { id: 66, name: 'Acerola', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 67, name: 'Cajá-manga', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 68, name: 'Groselha', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 69, name: 'Kiwi', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 70, name: 'Laranja', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 71, name: 'Limão', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 72, name: 'Maracujá', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 73, name: 'Morango', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 74, name: 'Pinta Língua', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 75, name: 'Tamarindo', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-  { id: 76, name: 'Uva', category: 'picole-fruta', type: 'icon', iconClass: 'custom-popsicle' },
-
-  // ZERO AÇÚCAR
-  { id: 77, name: 'Sorvete de Chocolate', category: 'zero', type: 'icon', icon: faLeaf },
-  { id: 78, name: 'Sorvete de Coco', category: 'zero', type: 'icon', icon: faLeaf },
-  { id: 79, name: 'Sorvete de Frutas Vermelhas', category: 'zero', type: 'icon', icon: faLeaf },
-  { id: 80, name: 'Sorvete de Morango', category: 'zero', type: 'icon', icon: faLeaf },
-
-  // AÇAÍ
-  { id: 81, name: 'Açaí Tradicional', category: 'acai', type: 'icon', icon: faBowlRice },
-  { id: 82, name: 'Açaí de Morango', category: 'acai', type: 'icon', icon: faBowlRice },
-  { id: 83, name: 'Açaí de Banana', category: 'acai', type: 'icon', icon: faBowlRice },
-
-  // ITUZINHO
-  { id: 84, name: 'Chocolate', category: 'ituzinho', type: 'icon', iconClass: 'ituzinho-icon' },
-  { id: 85, name: 'Chocolate Branco', category: 'ituzinho', type: 'icon', iconClass: 'ituzinho-icon' },
-  { id: 86, name: 'Coco', category: 'ituzinho', type: 'icon', iconClass: 'ituzinho-icon' },
-  { id: 87, name: 'Leite Condensado', category: 'ituzinho', type: 'image', src: '/images/picole-ituzinho/ituleitecondensado.png' },
-  { id: 88, name: 'Limão', category: 'ituzinho', type: 'icon', iconClass: 'ituzinho-icon' },
-  { id: 89, name: 'Maracujá', category: 'ituzinho', type: 'image', src: '/images/picole-ituzinho/itumaracuja.png' },
-  { id: 90, name: 'Morango', category: 'ituzinho', type: 'icon', iconClass: 'ituzinho-icon' },
-
-  // SKIMO
-  { id: 91, name: 'Bombom', category: 'skimo', type: 'icon', iconClass: 'skimo-icon' },
-  { id: 92, name: 'Brigadeiro', category: 'skimo', type: 'image', src: '/images/picole-skimo/brigadeiro.png' },
-  { id: 93, name: 'Coco', category: 'skimo', type: 'icon', iconClass: 'skimo-icon' },
-  { id: 94, name: 'Tentação', category: 'skimo', type: 'image', src: '/images/picole-skimo/tentacao.png' },
-]);
-
-const categoryDisplayNames: { [key: string]: string } = {
-  'sorvetes': 'Sorvetes',
-  'picole-leite': 'Picolé ao Leite',
-  'picole-fruta': 'Picolé de Fruta',
-  'ituzinho': 'Ituzinho',
-  'skimo': 'Skimó',
-  'zero': 'Zero Açúcar',
-  'acai': 'Açaí'
-};
+const router = useRouter();
 
 const coresSabor: { [key: string]: string } = {
   // Sorvetes
@@ -178,20 +67,63 @@ const coresSabor: { [key: string]: string } = {
   laranja: "#ffa500",
   "pinta língua": "#2c47dfff",
   tamarindo: "#ff7518",
+  // Extras
+  brigadeiro: "#5d4037",
+  tentação: "#fe758f",
 };
 
-const getCasquinhaColor = () => {
-  return '#dba171';
-};
-
+const getCasquinhaColor = () => '#dba171';
 const getSaborColor = (sabor: string) => {
   return coresSabor[sabor.toLowerCase()] || '#ffc0cb';
 };
 
-const searchTerm = ref('');
-const selectedCategory = ref('all');
-const showScrollToFiltersBtn = ref(false);
-const router = useRouter();
+const determinarEstiloVisual = (categoriaNome: string) => {
+  const cat = categoriaNome.toLowerCase();
+
+  if (cat.includes('ituzinho')) return 'ituzinho-icon';
+  if (cat.includes('skimo') || cat.includes('skimó')) return 'skimo-icon';
+  if (cat.includes('picolé') || cat.includes('picole')) return 'custom-popsicle';
+  if (cat.includes('açaí') || cat.includes('acai')) return 'fa-bowl-rice';
+  if (cat.includes('zero') || cat.includes('fitness')) return 'fa-leaf';
+
+  return 'ice-cream';
+};
+
+const fetchData = async () => {
+  isLoading.value = true;
+  try {
+    const resCat = await fetch(`${API_URL}/categories`);
+    if (resCat.ok) {
+      categories.value = await resCat.json();
+    }
+
+    const resProd = await fetch(`${API_URL}/products`);
+    if (resProd.ok) {
+      const rawProducts = await resProd.json();
+
+      products.value = rawProducts.map((p: any) => {
+        const categoryName = p.categoria?.nome || 'Outros';
+        const estilo = determinarEstiloVisual(categoryName);
+
+        return {
+          id: p.id,
+          name: p.nome,
+          categoryId: p.categoria?.id,
+          categoryName: categoryName,
+          type: p.imagemCapa ? 'image' : 'icon',
+          src: p.imagemCapa,
+
+          iconStyle: estilo,
+          faIcon: estilo === 'fa-leaf' ? faLeaf : (estilo === 'fa-bowl-rice' ? faBowlRice : null)
+        };
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao carregar dados:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 const goToProduct = (productId: number) => {
   router.push(`/produtos/${productId}`);
@@ -199,32 +131,28 @@ const goToProduct = (productId: number) => {
 
 const filteredProducts = computed(() => {
   return products.value.filter(product => {
-    const categoryMatch = selectedCategory.value === 'all' || product.category === selectedCategory.value;
+    const categoryMatch = selectedCategoryId.value === 'all' || product.categoryId === selectedCategoryId.value;
     const searchMatch = product.name.toLowerCase().includes(searchTerm.value.toLowerCase().trim());
     return categoryMatch && searchMatch;
   });
 });
 
-const selectCategory = (category: string) => {
-  selectedCategory.value = category;
+const selectCategory = (id: string | number) => {
+  selectedCategoryId.value = id;
   searchTerm.value = '';
 };
+
 const scrollToFilters = () => {
   const saboresSection = document.querySelector('#sabores');
   saboresSection?.scrollIntoView({ behavior: 'smooth' });
 };
 
 onMounted(() => {
-  window.scrollTo(0, 0);
+  fetchData();
 
+  window.scrollTo(0, 0);
   const saboresSection = document.querySelector('#sabores') as HTMLElement;
   const hero = document.querySelector(".hero") as HTMLElement;
-  const listeners: { element: EventTarget; type: string; handler: EventListener }[] = [];
-
-  const addListener = (element: EventTarget, type: string, handler: EventListener) => {
-    element.addEventListener(type, handler);
-    listeners.push({ element, type, handler });
-  };
 
   const handleScroll = () => {
     if (saboresSection) {
@@ -233,24 +161,21 @@ onMounted(() => {
   };
 
   const handleHeroMouseMove = (e: MouseEvent) => {
-    const heroContent = hero.querySelector(".hero-content") as HTMLElement;
-    const { clientX: x, clientY: y } = e;
-    const moveX = (x - window.innerWidth / 2) / 40;
-    const moveY = (y - window.innerHeight / 2) / 40;
+    const heroContent = hero?.querySelector(".hero-content") as HTMLElement;
     if (heroContent) {
+      const { clientX: x, clientY: y } = e;
+      const moveX = (x - window.innerWidth / 2) / 40;
+      const moveY = (y - window.innerHeight / 2) / 40;
       heroContent.style.transform = `translate(${moveX}px, ${moveY}px)`;
     }
   };
 
-  addListener(window, 'scroll', handleScroll);
-  if (hero) {
-    addListener(hero, "mousemove", handleHeroMouseMove as EventListener);
-  }
+  window.addEventListener('scroll', handleScroll);
+  if (hero) hero.addEventListener("mousemove", handleHeroMouseMove as EventListener);
 
   onUnmounted(() => {
-    listeners.forEach(({ element, type, handler }) => {
-      element.removeEventListener(type, handler);
-    });
+    window.removeEventListener('scroll', handleScroll);
+    if (hero) hero.removeEventListener("mousemove", handleHeroMouseMove as EventListener);
   });
 });
 </script>
@@ -266,7 +191,6 @@ onMounted(() => {
         </p>
         <a href="#sabores" class="cta-button" @click.prevent="scrollToFilters">Quero Ver os Sabores!</a>
       </div>
-
       <div class="floating-shape shape-1"></div>
       <div class="floating-shape shape-2"></div>
       <div class="floating-shape sprinkle shape-3"></div>
@@ -286,81 +210,84 @@ onMounted(() => {
         <h2>Nossos Sabores Irresistíveis</h2>
 
         <div class="tabs">
-          <button class="tab-button" @click="selectCategory('all')"
-            :class="{ active: selectedCategory === 'all' }">Todos</button>
-          <button class="tab-button" @click="selectCategory('picole-leite')"
-            :class="{ active: selectedCategory === 'picole-leite' }">Picolé ao Leite</button>
-          <button class="tab-button" @click="selectCategory('picole-fruta')"
-            :class="{ active: selectedCategory === 'picole-fruta' }">Picolé de Fruta</button>
-          <button class="tab-button" @click="selectCategory('ituzinho')"
-            :class="{ active: selectedCategory === 'ituzinho' }">Ituzinho</button>
-          <button class="tab-button" @click="selectCategory('skimo')"
-            :class="{ active: selectedCategory === 'skimo' }">Skimó</button>
-          <button class="tab-button" @click="selectCategory('sorvetes')"
-            :class="{ active: selectedCategory === 'sorvetes' }">Sorvetes</button>
-          <button class="tab-button" @click="selectCategory('zero')"
-            :class="{ active: selectedCategory === 'zero' }">Zero Açúcar</button>
-          <button class="tab-button" @click="selectCategory('acai')"
-            :class="{ active: selectedCategory === 'acai' }">Açaí</button>
+          <button class="tab-button" @click="selectCategory('all')" :class="{ active: selectedCategoryId === 'all' }">
+            Todos
+          </button>
+
+          <button v-for="cat in categories" :key="cat.id" class="tab-button" @click="selectCategory(cat.id)"
+            :class="{ active: selectedCategoryId === cat.id }">
+            {{ cat.nome }}
+          </button>
         </div>
 
         <div class="search-container">
           <input type="text" id="searchInput" v-model="searchTerm" placeholder="Digite o sabor que você procura...">
           <div class="custom-select-wrapper">
-            <select id="categorySelect" v-model="selectedCategory">
+            <select id="categorySelect" v-model="selectedCategoryId">
               <option value="all">Todas as Categorias</option>
-              <option value="picole-leite">Picolé ao Leite</option>
-              <option value="picole-fruta">Picolé de Fruta</option>
-              <option value="ituzinho">Ituzinho</option>
-              <option value="skimo">Skimó</option>
-              <option value="sorvetes">Sorvetes</option>
-              <option value="zero">Zero Açúcar</option>
-              <option value="acai">Açaí</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                {{ cat.nome }}
+              </option>
             </select>
           </div>
         </div>
 
-        <div v-if="filteredProducts.length === 0" id="noResultsMessage"
+        <div v-if="isLoading" class="products-grid">
+          <div v-for="i in 8" :key="i" class="product-card skeleton-card">
+            <div class="skeleton-visual"></div>
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line category"></div>
+            <div class="skeleton-button"></div>
+          </div>
+        </div>
+
+        <div v-else-if="filteredProducts.length === 0" id="noResultsMessage"
           style="text-align: center; padding: 20px; width: 100%;">
           <h3>Nenhum resultado encontrado para sua busca.</h3>
         </div>
 
-        <div class="products-grid">
-          <div v-for="product in filteredProducts" :key="`${product.category}-${product.name}`" class="product-card"
-            :class="product.category" @click="goToProduct(product.id)">
+        <div v-else class="products-grid">
+          <div v-for="product in filteredProducts" :key="product.id" class="product-card"
+            @click="goToProduct(product.id)">
+
             <div class="product-visual">
 
               <img v-if="product.type === 'image'" :src="product.src" :alt="product.name" />
 
-              <IconeSorvete v-else-if="product.icon?.iconName === 'ice-cream'" :cor-sabor="getSaborColor(product.name)"
+              <IconeSorvete v-else-if="product.iconStyle === 'ice-cream'" :cor-sabor="getSaborColor(product.name)"
                 :cor-casquinha="getCasquinhaColor()" :cor-detalhe-casquinha="'#c18c5d'" />
 
-              <svg v-else-if="product.iconClass === 'custom-popsicle'" class="custom-popsicle-icon"
+              <svg v-else-if="product.iconStyle === 'custom-popsicle'" class="custom-popsicle-icon"
                 viewBox="0 0 80 140">
                 <path d="M10,50 C10,10 70,10 70,50 V 110 H 10 Z" :style="{ fill: getSaborColor(product.name) }" />
                 <rect x="33" y="105" width="14" height="35" rx="4" />
               </svg>
-              <svg v-else-if="product.iconClass === 'ituzinho-icon'" class="ituzinho-icon" viewBox="0 0 60 160">
+
+              <svg v-else-if="product.iconStyle === 'ituzinho-icon'" class="ituzinho-icon" viewBox="0 0 60 160">
                 <rect x="24" y="120" width="12" height="40" rx="4" />
                 <path
                   d="M10,125 Q-5,105 10,85 Q-5,65 10,45 Q-5,25 10,5 C10,-5 50,-5 50,5 Q65,25 50,45 Q65,65 50,85 Q65,105 50,125 Z"
                   :style="{ fill: getSaborColor(product.name) }" />
               </svg>
-              <svg v-else-if="product.iconClass === 'skimo-icon'" class="skimo-icon" viewBox="0 0 80 140">
+
+              <svg v-else-if="product.iconStyle === 'skimo-icon'" class="skimo-icon" viewBox="0 0 80 140">
                 <rect class="stick" x="33" y="105" width="14" height="35" rx="4" />
                 <path class="inner-ice-cream" d="M10,50 C10,10 70,10 70,50 V 110 H 10 Z"
                   :style="{ fill: getSaborColor(product.name) }" />
                 <path class="chocolate-shell" d="M10,110 V50 C10,10 70,10 70,50 V40 C50,35 55,70 70,75 V110 H10 Z" />
               </svg>
 
-              <font-awesome-icon v-else-if="product.icon" :icon="product.icon"
+              <font-awesome-icon v-else-if="product.faIcon" :icon="product.faIcon"
                 :style="{ color: getSaborColor(product.name) }" />
 
             </div>
+
             <h3>{{ product.name }}</h3>
-            <p v-if="selectedCategory === 'all'" class="product-card-category">
-              {{ categoryDisplayNames[product.category] || product.category }}
+
+            <p v-if="selectedCategoryId === 'all'" class="product-card-category">
+              {{ product.categoryName }}
             </p>
+
             <button class="card-cta-button" @click.stop="goToProduct(product.id)">
               Ver mais
             </button>
@@ -368,6 +295,7 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
     <button @click="scrollToFilters" id="scrollToFiltersBtn" :class="{ show: showScrollToFiltersBtn }"
       title="Voltar aos filtros">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -891,7 +819,6 @@ header .container {
   min-width: 220px;
 }
 
-/* SUBSTITUA POR ISTO: */
 .custom-select-wrapper select {
   width: 100%;
   padding: 0.75rem;
@@ -902,7 +829,6 @@ header .container {
   border-radius: 8px;
   background-color: var(--c-branco);
   -webkit-appearance: none;
-  /* Remove a aparência padrão */
   -moz-appearance: none;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27292.4%27%20height%3D%27292.4%27%3E%3Cpath%20fill%3D%27%23888888%27%20d%3D%27M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%27%2F%3E%3C%2Fsvg%3E");
@@ -1052,7 +978,6 @@ header .container {
   font-family: var(--font-body);
   cursor: pointer;
   margin-top: 15px;
-  /* Espaçamento acima do botão */
   transition: all 0.3s ease;
   display: inline-block;
 }
@@ -1067,5 +992,60 @@ header .container {
 .card-cta-button:active {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(25, 197, 203, 0.3);
+}
+
+.skeleton-card {
+  cursor: default;
+  pointer-events: none;
+}
+
+.skeleton-visual {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin: 0 auto 15px;
+}
+
+.skeleton-line {
+  height: 16px;
+  border-radius: 4px;
+  margin: 0 auto 10px;
+}
+
+.skeleton-line.title {
+  width: 70%;
+  margin-bottom: 8px;
+}
+
+.skeleton-line.category {
+  width: 50%;
+  height: 12px;
+  margin-bottom: 20px;
+}
+
+.skeleton-button {
+  width: 110px;
+  height: 36px;
+  border-radius: 20px;
+  margin: 0 auto;
+}
+
+.skeleton-visual,
+.skeleton-line,
+.skeleton-button {
+  background: #f0f0f0;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

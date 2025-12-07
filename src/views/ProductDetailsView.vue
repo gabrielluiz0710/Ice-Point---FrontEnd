@@ -1,51 +1,97 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { products } from '@/stores/sabores';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faSearchPlus, faPlus, faMinus, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 const route = useRoute();
 const router = useRouter();
+const API_URL = import.meta.env.VITE_API_URL;
 
-const product = computed(() => {
-    const productIdParam = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
-    return products.value.find(p => p.id === parseInt(productIdParam || '0'));
-});
-
-const categoryDisplayNames: { [key: string]: string } = {
-    'sorvetes': 'Sorvetes',
-    'picole-leite': 'Picolé ao Leite',
-    'picole-fruta': 'Picolé de Fruta',
-    'ituzinho': 'Ituzinho',
-    'skimo': 'Skimó',
-    'zero': 'Zero Açúcar',
-    'acai': 'Açaí'
-};
-
+const product = ref<any>(null);
+const isLoading = ref(true);
 const imagemPrincipal = ref('');
 
 const abaAtiva = ref('nutricional');
-
 const lightboxVisivel = ref(false);
 const zoomLevel = ref(1);
 const imagePos = ref({ x: 0, y: 0 });
 const isDragging = ref(false);
 const startDragPos = ref({ x: 0, y: 0 });
 
+const fetchProductDetails = async (id: string) => {
+    isLoading.value = true;
+    product.value = null;
+
+    try {
+        const response = await fetch(`${API_URL}/products/${id}`);
+
+        if (response.ok) {
+            const data = await response.json();
+
+            product.value = {
+                id: data.id,
+                name: data.nome,
+                description: data.descricao,
+                category: data.categoria?.nome || 'Geral',
+                ingredients: data.ingredientes ? data.ingredientes.split(',').map((i: string) => i.trim()) : [],
+                allergens: data.alergicos ? data.alergicos.split(',').map((i: string) => i.trim()) : [],
+                nutrition: data.informacaoNutricional || {},
+                images: data.imagens
+                    ? data.imagens.sort((a: any, b: any) => a.ordem - b.ordem).map((i: any) => i.url)
+                    : []
+            };
+
+            if (product.value.images.length > 0) {
+                imagemPrincipal.value = product.value.images[0];
+            } else if (data.imagemCapa) {
+                product.value.images = [data.imagemCapa];
+                imagemPrincipal.value = data.imagemCapa;
+            }
+
+            atualizarUrlAmigavel();
+        }
+    } catch (error) {
+        console.error('Erro ao buscar produto:', error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const criarSlug = (texto: string) => {
+    return texto.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
+}
+
+const atualizarUrlAmigavel = () => {
+    if (!product.value) return;
+    const slug = criarSlug(`${product.value.category}-${product.value.name}`);
+    const paramsAtuais = route.params;
+
+    if (paramsAtuais.slug === slug) return;
+
+    const novaUrl = `/produtos/${product.value.id}/${slug}`;
+    window.history.replaceState({ ...window.history.state, current: novaUrl }, '', novaUrl);
+}
+
 onMounted(() => {
     window.scrollTo(0, 0);
+    const productId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id;
+    if (productId) fetchProductDetails(productId);
+});
 
-    if (product.value && product.value.images && product.value.images.length > 0) {
-        imagemPrincipal.value = product.value.images[0];
+watch(() => route.params.id, (newId) => {
+    if (newId) {
+        const idString = Array.isArray(newId) ? newId[0] : newId;
+        window.scrollTo(0, 0);
+        fetchProductDetails(idString);
     }
 });
 
-watch(() => route.params.id, () => {
-    if (product.value && product.value.images && product.value.images.length > 0) {
-        imagemPrincipal.value = product.value.images[0];
-        window.scrollTo(0, 0);
-    }
+const hasNutritionData = computed(() => {
+    if (!product.value?.nutrition) return false;
+    const values = Object.values(product.value.nutrition);
+    return values.some((val: any) => val && val.toString().trim() !== '');
 });
 
 function trocarImagemPrincipal(novaImagem: string) {
@@ -53,6 +99,7 @@ function trocarImagemPrincipal(novaImagem: string) {
 }
 
 function abrirLightbox() {
+    if (!imagemPrincipal.value) return;
     lightboxVisivel.value = true;
 }
 
@@ -72,37 +119,25 @@ function zoomIn() {
 
 function zoomOut() {
     zoomLevel.value = Math.max(1, zoomLevel.value - scaleAmount);
-    if (zoomLevel.value === 1) {
-        imagePos.value = { x: 0, y: 0 };
-    }
+    if (zoomLevel.value === 1) imagePos.value = { x: 0, y: 0 };
 }
 
 function handleZoom(event: WheelEvent) {
     if (!lightboxVisivel.value) return;
-
-    if (event.deltaY > 0) {
-        zoomOut();
-    } else {
-        zoomIn();
-    }
+    event.deltaY > 0 ? zoomOut() : zoomIn();
 }
 
 function startPan(event: MouseEvent) {
     if (zoomLevel.value <= 1) return;
     isDragging.value = true;
-    startDragPos.value = {
-        x: event.clientX - imagePos.value.x,
-        y: event.clientY - imagePos.value.y,
-    };
+    startDragPos.value = { x: event.clientX - imagePos.value.x, y: event.clientY - imagePos.value.y };
 }
 
 function panImage(event: MouseEvent) {
     if (!isDragging.value) return;
     event.preventDefault();
-
     const newX = event.clientX - startDragPos.value.x;
     const newY = event.clientY - startDragPos.value.y;
-
     const maxPan = (zoomLevel.value - 1) * 200;
     imagePos.value.x = Math.max(-maxPan, Math.min(maxPan, newX));
     imagePos.value.y = Math.max(-maxPan, Math.min(maxPan, newY));
@@ -115,19 +150,43 @@ function endPan() {
 
 <template>
     <main class="pagina-produto">
-        <div v-if="product" class="container">
+        <div v-if="isLoading" class="container skeleton-container">
+            <div class="skeleton-breadcrumb"></div>
+            <div class="produto-layout">
+                <div class="coluna-imagem">
+                    <div class="skeleton-image-main"></div>
+                    <div class="skeleton-thumbnails">
+                        <div v-for="i in 3" :key="i" class="skeleton-thumb"></div>
+                    </div>
+                </div>
+                <div class="coluna-info">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-subtitle"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-tabs"></div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else-if="product" class="container">
             <nav class="breadcrumb-nav">
                 <router-link to="/produtos">Produtos</router-link>
                 <span>/</span>
-                <p>{{ categoryDisplayNames[product.category] || product.category }}</p>
+                <p v-if="isLoading">Carregando...</p>
+                <p v-else>{{ product.category }}</p>
                 <p>-</p>
                 <p>{{ product.name }}</p>
             </nav>
 
             <div class="produto-layout">
                 <div class="coluna-imagem">
-                    <div class="imagem-principal-wrapper" @click="abrirLightbox">
-                        <img :src="imagemPrincipal" :alt="`Imagem principal de ${product.name}`" />
+                    <div class="imagem-principal-wrapper fixed-aspect-ratio" @click="abrirLightbox">
+                        <img v-if="imagemPrincipal" :src="imagemPrincipal" :alt="product.name" class="contain-image" />
+                        <div v-else class="image-placeholder">
+                            <font-awesome-icon :icon="faQuestionCircle" />
+                            <span>Sem imagem</span>
+                        </div>
                         <div class="zoom-icon">
                             <font-awesome-icon :icon="faSearchPlus" size="lg" />
                         </div>
@@ -141,8 +200,12 @@ function endPan() {
 
                 <div class="coluna-info">
                     <h1>{{ product.name }}</h1>
-                    <p class="subtitulo">{{ categoryDisplayNames[product.category] || product.category }}</p>
-                    <p class="descricao">{{ product.description }}</p>
+                    <p v-if="isLoading">Carregando...</p>
+                    <p v-else class="subtitulo">{{ product.category }}</p>
+                    <p v-if="product.description" class="descricao">{{ product.description }}</p>
+                    <div v-else class="empty-state-text">
+                        <p>Uma delícia sem palavras para descrever! 😋</p>
+                    </div>
 
                     <div class="secao-abas">
                         <div class="abas-botoes">
@@ -166,12 +229,16 @@ function endPan() {
                                 </button>
                                 <Transition name="slide-fade">
                                     <div v-show="abaAtiva === 'nutricional'" class="aba-conteudo">
-                                        <div class="info-nutricional">
+                                        <div v-if="hasNutritionData" class="info-nutricional">
                                             <ul>
                                                 <li v-for="(value, key) in product.nutrition" :key="key">
                                                     <strong>{{ key }}:</strong> {{ value }}
                                                 </li>
                                             </ul>
+                                        </div>
+                                        <div v-else class="empty-tab-state">
+                                            <font-awesome-icon :icon="faQuestionCircle" class="empty-icon" />
+                                            <p>Tabela nutricional em atualização.</p>
                                         </div>
                                     </div>
                                 </Transition>
@@ -185,7 +252,12 @@ function endPan() {
                                 </button>
                                 <Transition name="slide-fade">
                                     <div v-show="abaAtiva === 'ingredientes'" class="aba-conteudo">
-                                        <p>{{ product.ingredients.join(', ') }}.</p>
+                                        <p v-if="product.ingredients.length > 0">{{ product.ingredients.join(', ') }}.
+                                        </p>
+                                        <div v-else class="empty-tab-state">
+                                            <font-awesome-icon :icon="faQuestionCircle" class="empty-icon" />
+                                            <p>Lista de ingredientes indisponível no momento.</p>
+                                        </div>
                                     </div>
                                 </Transition>
                             </div>
@@ -198,7 +270,11 @@ function endPan() {
                                 </button>
                                 <Transition name="slide-fade">
                                     <div v-show="abaAtiva === 'alergicos'" class="aba-conteudo">
-                                        <p>{{ product.allergens.join(' ') }}</p>
+                                        <p v-if="product.allergens.length > 0">{{ product.allergens.join(' ') }}</p>
+                                        <div v-else class="empty-tab-state">
+                                            <font-awesome-icon :icon="faQuestionCircle" class="empty-icon" />
+                                            <p>Consulte a embalagem ou nossa equipe para informações de alérgenos.</p>
+                                        </div>
                                     </div>
                                 </Transition>
                             </div>
@@ -211,10 +287,8 @@ function endPan() {
         <div v-else class="container not-found">
             <div class="not-found-content">
                 <font-awesome-icon :icon="faQuestionCircle" class="not-found-icon" />
-
                 <h1>Oops! Sabor esgotado.</h1>
-                <p>Não encontramos o produto que você procurava. Mas não se preocupe, temos muitas outras delícias
-                    esperando por você!</p>
+                <p>Não encontramos o produto que você procurava.</p>
                 <router-link to="/produtos" class="cta-button">Ver outros sabores</router-link>
             </div>
         </div>
@@ -223,16 +297,10 @@ function endPan() {
             <img :src="imagemPrincipal" class="lightbox-imagem" @click.stop :class="{ 'is-dragging': isDragging }"
                 :style="{ transform: `scale(${zoomLevel}) translate(${imagePos.x}px, ${imagePos.y}px)` }"
                 @mousedown.prevent="startPan" @mousemove.prevent="panImage" @mouseup="endPan" @mouseleave="endPan" />
-
             <button class="fechar-lightbox" @click="fecharLightbox">&times;</button>
-
             <div class="zoom-controls" @click.stop>
-                <button @click="zoomOut" title="Diminuir zoom">
-                    <font-awesome-icon :icon="faMinus" />
-                </button>
-                <button @click="zoomIn" title="Aumentar zoom">
-                    <font-awesome-icon :icon="faPlus" />
-                </button>
+                <button @click="zoomOut"><font-awesome-icon :icon="faMinus" /></button>
+                <button @click="zoomIn"><font-awesome-icon :icon="faPlus" /></button>
             </div>
         </div>
     </main>
@@ -258,6 +326,21 @@ function endPan() {
     height: auto;
     display: block;
     object-fit: cover;
+}
+
+.imagem-principal-wrapper.fixed-aspect-ratio {
+    width: 100%;
+    aspect-ratio: 4 / 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+}
+
+.contain-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .imagens-miniatura {
@@ -884,5 +967,178 @@ body {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+.skeleton-breadcrumb {
+    height: 20px;
+    width: 300px;
+    background: #e0e0e0;
+    margin-bottom: 40px;
+    border-radius: 4px;
+}
+
+.skeleton-image-main {
+    width: 100%;
+    aspect-ratio: 4 / 4;
+    background: #e0e0e0;
+    border-radius: 20px;
+    margin-bottom: 20px;
+}
+
+.skeleton-thumbnails {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.skeleton-thumb {
+    width: 80px;
+    height: 80px;
+    background: #e0e0e0;
+    border-radius: 10px;
+}
+
+.skeleton-title {
+    height: 40px;
+    width: 60%;
+    background: #e0e0e0;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.skeleton-subtitle {
+    height: 24px;
+    width: 30%;
+    background: #e0e0e0;
+    margin-bottom: 30px;
+    border-radius: 6px;
+}
+
+.skeleton-text {
+    height: 16px;
+    width: 100%;
+    background: #e0e0e0;
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+.skeleton-tabs {
+    margin-top: 40px;
+    height: 50px;
+    width: 100%;
+    background: #e0e0e0;
+    border-radius: 8px;
+}
+
+.skeleton-breadcrumb,
+.skeleton-image-main,
+.skeleton-thumb,
+.skeleton-title,
+.skeleton-subtitle,
+.skeleton-text,
+.skeleton-tabs {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.empty-state-text {
+    font-style: italic;
+    color: #888;
+    margin-bottom: 30px;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--c-azul);
+}
+
+.empty-tab-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 0;
+    color: #999;
+    text-align: center;
+    gap: 10px;
+}
+
+.empty-icon {
+    font-size: 1.5rem;
+    opacity: 0.5;
+    margin-bottom: 5px;
+}
+
+.image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    color: #9ca3af;
+    gap: 16px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    padding: 20px;
+}
+
+.image-placeholder svg {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    padding: 80px 80px 0 80px;
+}
+
+.image-placeholder span {
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-family: 'Fredoka', sans-serif;
+    color: #6b7280;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    text-align: center;
+    padding-bottom: 80px;
+}
+
+.imagem-principal-wrapper:hover .image-placeholder {
+    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    color: var(--c-azul);
+}
+
+.imagem-principal-wrapper:hover .image-placeholder span {
+    color: var(--c-azul);
+}
+
+@media (max-width: 768px) {
+    .imagem-principal-wrapper.fixed-aspect-ratio {
+        aspect-ratio: 4 / 3;
+        border-radius: 16px;
+    }
+
+    .image-placeholder svg {
+        width: 60px;
+        height: 60px;
+    }
+
+    .image-placeholder {
+        border-radius: 16px;
+        gap: 10px;
+    }
+
+    .image-placeholder span {
+        font-size: 0.9rem;
+    }
 }
 </style>

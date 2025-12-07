@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import type { CardItem } from '@/types/CardItem';
+
+interface CardItem {
+    id: number;
+    image: string;
+    title: string;
+    description: string;
+    link: string;
+}
 
 defineProps<{
     item: CardItem;

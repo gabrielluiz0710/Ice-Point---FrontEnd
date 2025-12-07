@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useCartStore } from '@/stores/cart';
+import { useCartStore, type CartItem, type DBProduct } from '@/stores/cart';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faInfoCircle, faIceCream } from '@fortawesome/free-solid-svg-icons';
+import { useRouter } from 'vue-router';
+
 const props = defineProps<{
-    product: {
-        id: number
-        name: string
-        description: string
-        price: number
-        image: string
-        quantity: number
-    }
+    product: DBProduct
 }>()
 
 const MAX_INDIVIDUAL_QUANTITY = 2000;
 const MAX_GLOBAL_QUANTITY = 2000;
 
 const cartStore = useCartStore();
+const router = useRouter();
 
 const emit = defineEmits(['update:quantity', 'limit-exceeded'])
 
@@ -23,6 +21,10 @@ const inputWidth = computed(() => {
     const charCount = String(props.product.quantity).length || 1;
     return `${charCount + 1.5}ch`;
 });
+
+function goToDetails() {
+    router.push(`/produtos/${props.product.id}`);
+}
 
 function increment() {
     if (props.product.quantity >= MAX_INDIVIDUAL_QUANTITY || cartStore.totalCartQuantity >= MAX_GLOBAL_QUANTITY) {
@@ -54,18 +56,30 @@ function handleInput(event: Event) {
     target.value = String(numericValue);
     emit('update:quantity', { productId: props.product.id, newQuantity: numericValue });
 }
+
+const displayPrice = computed(() => Number(props.product.preco_unitario));
+
+const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLACEHOLDER_DE_ICONE');
 </script>
 
 <template>
     <div class="product-card" :class="{ 'in-cart': product.quantity > 0 }">
         <div class="card-image-container">
-            <img :src="product.image" :alt="product.name" class="product-image" loading="lazy" />
+            <div v-if="displayImage === 'URL_DO_SEU_PLACEHOLDER_DE_ICONE'" class="product-icon-fallback">
+                <font-awesome-icon :icon="faIceCream" class="fallback-icon" />
+            </div>
+
+            <img v-else :src="displayImage" :alt="product.nome" class="product-image" loading="lazy" />
+
+            <div class="info-control" @click.stop="goToDetails" title="Ver detalhes e informações nutricionais">
+                <font-awesome-icon :icon="faInfoCircle" />
+            </div>
         </div>
         <div class="card-content">
-            <h3 class="product-name">{{ product.name }}</h3>
-            <p class="product-description">{{ product.description }}</p>
+            <h3 class="product-name">{{ product.nome }}</h3>
+            <p class="product-description">{{ product.descricao }}</p>
             <div class="card-footer">
-                <span class="product-price">R$ {{ product.price.toFixed(2) }}</span>
+                <span class="product-price">R$ {{ displayPrice.toFixed(2) }}</span>
                 <div class="quantity-control">
                     <button @click="decrement" class="quantity-btn" aria-label="Diminuir quantidade">-</button>
                     <input type="text" class="quantity-input" :value="product.quantity" @input="handleInput" min="0"
@@ -104,6 +118,58 @@ function handleInput(event: Event) {
     width: 100%;
     height: 200px;
     overflow: hidden;
+    position: relative;
+}
+
+.info-control {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.product-card:hover .info-control {
+    opacity: 1;
+    visibility: visible;
+}
+
+.info-control:hover {
+    background-color: var(--c-azul);
+    box-shadow: 0 0 10px var(--c-azul-dark);
+}
+
+.product-icon-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+}
+
+.product-icon-fallback .fallback-icon {
+    font-size: 5rem;
+    color: var(--c-rosa);
+    opacity: 0.5;
+    max-width: 80%;
+    max-height: 80%;
+}
+
+.product-card:hover .product-icon-fallback {
+    transform: scale(1.1);
+    transition: transform 0.4s ease;
 }
 
 .product-image {

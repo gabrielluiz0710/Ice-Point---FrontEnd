@@ -7,14 +7,6 @@ import banner2_big from '@/assets/images/carousel2-big.jpg';
 import banner2_medium from '@/assets/images/carousel2-medium.jpg';
 import banner2_small from '@/assets/images/carousel2-small.jpg';
 import ProductCarousel from '@/components/ProductCarousel.vue';
-import type { CardItem } from '@/types/CardItem';
-import brigadeiroImg from '@/assets/images/cards/brigadeiro.png';
-import tentacaoImg from '@/assets/images/cards/tentacao.png';
-import ituLeiteCondensadoImg from '@/assets/images/cards/ituleitecondensado.png';
-import abacaxiImg from '@/assets/images/cards/abacaxi.png';
-import ituMaracujaImg from '@/assets/images/cards/itumaracuja.png';
-import morangoLeiteImg from '@/assets/images/cards/morangoleite.png';
-import limaoSuicoImg from '@/assets/images/cards/limaosuico.png';
 import carrinhoImg from '@/assets/images/carrinho.png';
 import flavorGirlImg from '@/assets/images/caracter2.png';
 import Depoimentos from '@/components/Depoimentos.vue';
@@ -32,58 +24,6 @@ const slideData = [
     medium: banner2_medium,
     big: banner2_big,
     alt: 'Descrição do banner 2'
-  },
-];
-
-const cardData: CardItem[] = [
-  {
-    id: 92,
-    image: brigadeiroImg,
-    title: 'Brigadeiro',
-    description: 'Picolé de chocolate com casquinha de chocolate meio amargo e granulado.',
-    link: '#brigadeiro'
-  },
-  {
-    id: 94,
-    image: tentacaoImg,
-    title: 'Tentação',
-    description: 'Picolé de morango ao leite com casquinha de chocolate meio amargo.',
-    link: '#tentacao'
-  },
-  {
-    id: 87,
-    image: ituLeiteCondensadoImg,
-    title: 'Leite Condensado',
-    description: 'Picolé de leite condensado com um delicioso recheio de morango.',
-    link: '#leitecondensado1'
-  },
-  {
-    id: 58,
-    image: limaoSuicoImg,
-    title: 'Limão Suíço',
-    description: 'Picolé de limão suíço',
-    link: '#leitecondensado2'
-  },
-  {
-    id: 65,
-    image: abacaxiImg,
-    title: 'Abacaxi',
-    description: 'Picolé de abacaxi',
-    link: '#leitecondensado3'
-  },
-  {
-    id: 61,
-    image: morangoLeiteImg,
-    title: 'Morango ao Leite',
-    description: 'Picolé de morango ao leite',
-    link: '#leitecondensado4'
-  },
-  {
-    id: 89,
-    image: ituMaracujaImg,
-    title: 'Leite Condensado',
-    description: 'Picolé de ituzinho de maracujá com recheio de maracujá',
-    link: '#leitecondensado5'
   },
 ];
 
@@ -120,7 +60,7 @@ onMounted(() => {
   <main>
     <h1>Destaques do momento</h1>
     <h2>Experimente nossos produtos e novidades!</h2>
-    <ProductCarousel :items="cardData" />
+    <ProductCarousel />
 
     <section class="cta-section">
       <div class="cta-container">
@@ -163,8 +103,8 @@ onMounted(() => {
         </div>
       </div>
     </section>
-    <Depoimentos />
   </main>
+  <Depoimentos />
 </template>
 
 <style scoped>

@@ -9,7 +9,7 @@ import { useUserStore } from '@/stores/user'
 
 import UserFormModal from '../../components/admin/users/UserFormModal.vue'
 import UserDetailsModal from '../../components/admin/users/UserDetailsModal.vue'
-import DeleteConfirmModal from '@/components/admin/products/DeleteConfirmModal.vue'
+import DeleteConfirmModal from '../../components/admin/users/DeleteUserModal.vue'
 
 const userStore = useUserStore()
 const API_URL = import.meta.env.VITE_API_URL
@@ -229,8 +229,8 @@ onMounted(() => {
 
         <UserDetailsModal :show="showDetailsModal" :user="selectedUser" @close="showDetailsModal = false" />
 
-        <DeleteConfirmModal :show="showDeleteModal" :product-name="selectedUser?.nome || ''"
-            @close="showDeleteModal = false" @confirm="handleDeleteUser" />
+        <DeleteConfirmModal :show="showDeleteModal" :user="selectedUser" @close="showDeleteModal = false"
+            @confirm="handleDeleteUser" />
     </div>
 </template>
 

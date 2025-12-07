@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faPlus, faSearch, faEdit, faTrashAlt, faBoxOpen, faIceCream } from '@fortawesome/free-solid-svg-icons'
+import { faPlus, faSearch, faEdit, faTrashAlt, faBoxOpen, faIceCream, faStar, faTags } from '@fortawesome/free-solid-svg-icons'
 import { useUserStore } from '@/stores/user'
 
 import ProductFormModal from '@/components/admin/products/ProductFormModal.vue'
 import DeleteConfirmModal from '@/components/admin/products/DeleteConfirmModal.vue'
+import CategoryPriceModal from '@/components/admin/products/CategoryPriceModal.vue'
+import ToastNotification from '@/components/admin/products/ToastNotification.vue'
 
 const userStore = useUserStore()
 const API_URL = import.meta.env.VITE_API_URL
 
+const togglingHighlight = ref<number | null>(null)
 const products = ref<any[]>([])
 const categories = ref<any[]>([])
 const isLoading = ref(true)
@@ -19,6 +22,19 @@ const searchQuery = ref('')
 const showFormModal = ref(false)
 const showDeleteModal = ref(false)
 const selectedProduct = ref<any | null>(null)
+const showPriceModal = ref(false)
+const toast = ref({
+    show: false,
+    message: '',
+    type: 'success' as 'success' | 'error' | 'info'
+})
+
+const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    toast.value = { show: true, message, type }
+    setTimeout(() => {
+        toast.value.show = false
+    }, 4000)
+}
 
 const fetchData = async () => {
     isLoading.value = true
@@ -59,6 +75,37 @@ const groupedProducts = computed(() => {
         return acc
     }, {} as Record<string, any[]>)
 })
+
+const toggleHighlight = async (product: any) => {
+    if (togglingHighlight.value === product.id) return
+
+    togglingHighlight.value = product.id
+    const novoStatus = !product.destaque
+
+    try {
+        const { data: { session } } = await userStore.supabase.auth.getSession()
+        if (!session) return
+
+        const response = await fetch(`${API_URL}/products/${product.id}/highlight`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ destaque: novoStatus })
+        })
+
+        if (response.ok) {
+            product.destaque = novoStatus
+        } else {
+            alert('Erro ao alterar destaque.')
+        }
+    } catch (error) {
+        console.error('Erro ao destacar:', error)
+    } finally {
+        togglingHighlight.value = null
+    }
+}
 
 const openCreateModal = () => { selectedProduct.value = null; showFormModal.value = true }
 const openEditModal = (product: any) => { selectedProduct.value = product; showFormModal.value = true }
@@ -144,6 +191,40 @@ const handleDeleteProduct = async () => {
     } catch (e) { console.error(e) }
 }
 
+const handleUpdateCategoryPrice = async (payload: { categoryId: number, newPrice: number }) => {
+    isSaving.value = true
+    try {
+        const { data: { session } } = await userStore.supabase.auth.getSession()
+        if (!session) return
+
+        const response = await fetch(`${API_URL}/products/update-category-price`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (response.ok) {
+            const result = await response.json()
+
+            showToast(result.message || 'Preços atualizados com sucesso!', 'success')
+
+            showPriceModal.value = false
+            fetchData()
+        } else {
+            const error = await response.json()
+            showToast(error.message || 'Não foi possível atualizar', 'error')
+        }
+    } catch (err) {
+        console.error(err)
+        showToast('Erro de conexão com o servidor', 'error')
+    } finally {
+        isSaving.value = false
+    }
+}
+
 onMounted(() => {
     fetchData()
 })
@@ -158,10 +239,17 @@ onMounted(() => {
                 </h1>
                 <p class="subtitle">Organize seu catálogo, preços e estoque.</p>
             </div>
-            <button class="btn-create" @click="openCreateModal">
-                <font-awesome-icon :icon="faPlus" />
-                <span>Novo Produto</span>
-            </button>
+            <div class="header-actions">
+                <button class="btn-price-update" @click="showPriceModal = true">
+                    <font-awesome-icon :icon="faTags" />
+                    <span>Atualizar Preço da Categoria</span>
+                </button>
+
+                <button class="btn-create" @click="openCreateModal">
+                    <font-awesome-icon :icon="faPlus" />
+                    <span>Novo Produto</span>
+                </button>
+            </div>
         </header>
 
         <div class="toolbar">
@@ -206,6 +294,12 @@ onMounted(() => {
                                 <div v-else class="placeholder-icon">
                                     <font-awesome-icon :icon="faIceCream" />
                                 </div>
+                                <button class="highlight-btn"
+                                    :class="{ 'active': product.destaque, 'loading': togglingHighlight === product.id }"
+                                    @click.stop="toggleHighlight(product)"
+                                    :title="product.destaque ? 'Remover destaque' : 'Destacar produto'">
+                                    <font-awesome-icon :icon="faStar" />
+                                </button>
 
                                 <span class="status-badge" :class="{ 'unavailable': !product.disponivel }">
                                     {{ product.disponivel ? 'Ativo' : 'Indisponível' }}
@@ -248,6 +342,11 @@ onMounted(() => {
 
         <DeleteConfirmModal :show="showDeleteModal" :product-name="selectedProduct?.nome || ''"
             @close="showDeleteModal = false" @confirm="handleDeleteProduct" />
+
+        <CategoryPriceModal :show="showPriceModal" :categories="categories" :loading="isSaving"
+            @close="showPriceModal = false" @save="handleUpdateCategoryPrice" />
+
+        <ToastNotification :show="toast.show" :message="toast.message" :type="toast.type" @close="toast.show = false" />
 
     </div>
 </template>
@@ -614,7 +713,151 @@ onMounted(() => {
     display: flex;
 }
 
+.highlight-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #CBD5E1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 1.1rem;
+}
+
+.highlight-btn:hover {
+    transform: scale(1.1);
+    background: white;
+    color: #94A3B8;
+}
+
+.highlight-btn.active {
+    color: #F59E0B;
+    background: #FFFBEB;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.highlight-btn.loading {
+    cursor: wait;
+    opacity: 0.7;
+    animation: pulse-star 1s infinite;
+}
+
+@keyframes pulse-star {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(0.85);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-price-update {
+    background: white;
+    color: #0284C7;
+    border: 2px solid #E0F2FE;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-family: 'Fredoka', sans-serif;
+}
+
+.btn-price-update:hover {
+    background: #E0F2FE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(2, 132, 199, 0.1);
+}
+
+/* O resto do CSS original */
+.products-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.btn-create {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(255, 94, 142, 0.3);
+    font-family: 'Fredoka', sans-serif;
+}
+
+.btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(255, 94, 142, 0.4);
+}
+
+
 @media (max-width: 900px) {
+    .highlight-btn {
+        width: 40px;
+        height: 40px;
+        top: 8px;
+        right: 8px;
+        font-size: 1.2rem;
+    }
+
     .products-grid {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 1rem;
@@ -626,6 +869,11 @@ onMounted(() => {
     }
 
     .btn-create {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-price-update {
         width: 100%;
         justify-content: center;
     }

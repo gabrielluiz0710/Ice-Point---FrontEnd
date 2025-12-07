@@ -1,131 +1,75 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { Ref } from 'vue'
+import { faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 
+const API_URL = import.meta.env.VITE_API_URL
 const ANON_CART_KEY = 'icepoint_anon_cart'
 
-import brigadeiroImg from '@/assets/images/cards/brigadeiro.png'
-import tentacaoImg from '@/assets/images/cards/tentacao.png'
-import ituLeiteCondensadoImg from '@/assets/images/cards/ituleitecondensado.png'
-import abacaxiImg from '@/assets/images/cards/abacaxi.png'
-import ituMaracujaImg from '@/assets/images/cards/itumaracuja.png'
-import morangoLeiteImg from '@/assets/images/cards/morangoleite.png'
-import limaoSuicoImg from '@/assets/images/cards/limaosuico.png'
-import milhoImg from '@/assets/images/cards/milho.png'
-
-export interface Product {
+export interface CartItem {
   id: number
   name: string
   description: string
   price: number
   image: string
   quantity: number
+  preco_unitario: number
+  nome: string
+  descricao: string
+  imagemCapa: string | null
 }
 
-export interface Category {
+export interface DBProduct {
+  id: number
+  nome: string
+  descricao: string
+  preco_unitario: number
+  imagemCapa: string | null
+  categoria: { nome: string }
+  quantity: number
+}
+
+export interface CartCategory {
   name: string
-  products: Product[]
+  products: DBProduct[]
 }
 
 export const useCartStore = defineStore('cart', () => {
-  const productCategories: Ref<Category[]> = ref([
-    {
-      name: 'Picolés ao Leite',
-      products: [
-        {
-          id: 1,
-          name: 'Limão Suíço',
-          description:
-            'O equilíbrio perfeito entre o azedinho do limão e a cremosidade do leite, uma combinação refrescante.',
-          price: 2.0,
-          image: limaoSuicoImg,
-          quantity: 0,
-        },
-        {
-          id: 2,
-          name: 'Milho Verde',
-          description:
-            'Sabor autêntico de milho fresquinho, transformado em um picolé cremoso que lembra festa junina.',
-          price: 2.0,
-          image: milhoImg,
-          quantity: 0,
-        },
-        {
-          id: 3,
-          name: 'Morango',
-          description:
-            'A doçura natural do morango em um picolé suave e cremoso, feito com pedaços da fruta.',
-          price: 2.0,
-          image: morangoLeiteImg,
-          quantity: 0,
-        },
-      ],
-    },
-    {
-      name: 'Picolés de Fruta',
-      products: [
-        {
-          id: 4,
-          name: 'Abacaxi',
-          description:
-            'Refrescante e cítrico, feito com suco natural da fruta para um sabor tropical autêntico.',
-          price: 1.5,
-          image: abacaxiImg,
-          quantity: 0,
-        },
-      ],
-    },
-    {
-      name: 'Ituzinhos',
-      products: [
-        {
-          id: 5,
-          name: 'Ituzinho de Maracujá',
-          description: 'A intensidade do maracujá em dose dupla com recheio por dentro.',
-          price: 3.5,
-          image: ituMaracujaImg,
-          quantity: 0,
-        },
-        {
-          id: 6,
-          name: 'Ituzinho de Leite Condensado',
-          description:
-            'A doçura inconfundível do leite condensado em um formato super cremoso e irresistível.',
-          price: 3.5,
-          image: ituLeiteCondensadoImg,
-          quantity: 0,
-        },
-      ],
-    },
-    {
-      name: 'Skimo',
-      products: [
-        {
-          id: 7,
-          name: 'Brigadeiro',
-          description:
-            'Cremoso sorvete de brigadeiro com uma casquinha crocante de chocolate ao leite.',
-          price: 4.0,
-          image: brigadeiroImg,
-          quantity: 0,
-        },
-        {
-          id: 8,
-          name: 'Tentação',
-          description:
-            'A clássica combinação de morango e chocolate, com uma cobertura que quebra a cada mordida.',
-          price: 4.0,
-          image: tentacaoImg,
-          quantity: 0,
-        },
-      ],
-    },
-  ])
+  const productCatalog: Ref<DBProduct[]> = ref([])
 
-  const cartItems = computed(() => {
-    return productCategories.value
-      .flatMap((category) => category.products)
+  const productCategories = computed<CartCategory[]>(() => {
+    const groups = productCatalog.value.reduce(
+      (acc, product) => {
+        const catName = product.categoria?.nome || 'Sem Categoria'
+        if (!acc[catName]) {
+          acc[catName] = { name: catName, products: [] }
+        }
+        acc[catName].products.push(product)
+        return acc
+      },
+      {} as Record<string, CartCategory>,
+    )
+
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name))
+  })
+
+  const cartItems = computed<CartItem[]>(() => {
+    return productCatalog.value
       .filter((product) => product.quantity > 0)
+      .map((p) => ({
+        ...p,
+        nome: p.nome,
+        descricao: p.descricao,
+        preco_unitario: Number(p.preco_unitario),
+        imagemCapa: p.imagemCapa,
+
+        id: p.id,
+        name: p.nome,
+        description: p.descricao,
+        price: Number(p.preco_unitario),
+        image: p.imagemCapa || 'placeholder_icon_url',
+        quantity: p.quantity,
+      }))
   })
 
   const totalCartQuantity = computed(() => {
@@ -133,30 +77,45 @@ export const useCartStore = defineStore('cart', () => {
   })
 
   const totalCartPrice = computed(() => {
-    return cartItems.value.reduce((total, item) => total + item.price * item.quantity, 0)
+    return cartItems.value.reduce((total, item) => total + item.preco_unitario * item.quantity, 0)
   })
 
-  function loadAnonCartFromStorage() {
-    const storedItems = localStorage.getItem(ANON_CART_KEY)
-    if (storedItems) {
-      const anonItems = JSON.parse(storedItems) as { productId: number; quantity: number }[]
+  async function fetchCatalog() {
+    try {
+      const response = await fetch(`${API_URL}/products`)
+      if (response.ok) {
+        const rawProducts = await response.json()
 
-      // Mescla os itens do LocalStorage no state do Pinia (productCategories)
-      anonItems.forEach((anonItem) => {
-        for (const category of productCategories.value) {
-          const product = category.products.find((p) => p.id === anonItem.productId)
-          if (product) {
-            // Assume que a PK no DB é igual ao ID do produto no frontend
-            product.quantity = anonItem.quantity
-            break
-          }
-        }
-      })
+        productCatalog.value = rawProducts.map((p: any) => ({
+          ...p,
+          quantity: 0,
+          preco_unitario: Number(p.preco_unitario),
+        }))
+
+        loadAnonCartFromStorage()
+      } else {
+        console.error('Falha ao carregar catálogo do DB')
+      }
+    } catch (e) {
+      console.error('Erro de conexão ao buscar catálogo:', e)
     }
   }
 
+  function loadAnonCartFromStorage() {
+    const storedItems = localStorage.getItem(ANON_CART_KEY)
+    if (!storedItems) return
+
+    const anonItems = JSON.parse(storedItems) as { productId: number; quantity: number }[]
+
+    anonItems.forEach((anonItem) => {
+      const product = productCatalog.value.find((p) => p.id === anonItem.productId)
+      if (product) {
+        product.quantity = anonItem.quantity
+      }
+    })
+  }
+
   function saveAnonCartToStorage() {
-    // Salva apenas os itens que estão no carrinho (quantity > 0)
     const itemsToStore = cartItems.value.map((item) => ({
       productId: item.id,
       quantity: item.quantity,
@@ -173,40 +132,29 @@ export const useCartStore = defineStore('cart', () => {
     return storedItems ? JSON.parse(storedItems) : []
   }
 
-  // Watcher para salvar o carrinho no LocalStorage sempre que for alterado
-  // Nota: Em um app de verdade, isso só deve acontecer se o usuário NÃO estiver logado.
   watch(cartItems, saveAnonCartToStorage, { deep: true })
-
-  // Chamado no login (veja useUserStore)
-  async function fetchUserCart() {
-    console.log('Carregando/Mesclando carrinho persistente do DB...')
-    // Lógica de DB virá aqui
-  }
-
-  // Inicialização: carrega o carrinho anônimo ao iniciar o Store
-  loadAnonCartFromStorage()
 
   function updateQuantity({ productId, newQuantity }: { productId: number; newQuantity: number }) {
     const quantity = Math.max(0, newQuantity)
-    for (const category of productCategories.value) {
-      const product = category.products.find((p) => p.id === productId)
-      if (product) {
-        product.quantity = quantity
-        break
-      }
+
+    const product = productCatalog.value.find((p) => p.id === productId)
+
+    if (product) {
+      product.quantity = quantity
     }
   }
 
   function emptyCart() {
-    productCategories.value.forEach((category) => {
-      category.products.forEach((product) => {
-        product.quantity = 0
-      })
+    productCatalog.value.forEach((product) => {
+      product.quantity = 0
     })
   }
 
+  fetchCatalog()
+
   return {
     productCategories,
+    productCatalog,
     cartItems,
     totalCartQuantity,
     totalCartPrice,
@@ -214,6 +162,6 @@ export const useCartStore = defineStore('cart', () => {
     emptyCart,
     clearAnonStorage,
     getAnonItems,
-    fetchUserCart,
+    fetchUserCart: () => console.log('Ainda não implementado, mas fetchCatalog já está rodando.'),
   }
 })
