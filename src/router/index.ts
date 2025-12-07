@@ -21,6 +21,7 @@ import { supabase } from '@/service/supabase'
 import AdminView from '../views/AdminView.vue'
 import AdminDashboard from '../views/admin/DashboardView.vue'
 import AdminProductsView from '../views/admin/ProductsView.vue'
+import AdminUsersView from '../views/admin/UsersView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -125,6 +126,12 @@ const router = createRouter({
           path: 'produtos',
           name: 'admin-produtos',
           component: AdminProductsView,
+        },
+        {
+          path: 'usuarios',
+          name: 'admin-usuarios',
+          component: AdminUsersView,
+          meta: { roles: ['ADMIN'] },
         },
       ],
     },

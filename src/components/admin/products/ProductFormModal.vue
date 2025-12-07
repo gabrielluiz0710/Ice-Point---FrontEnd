@@ -17,6 +17,12 @@ interface NutriItem {
     value: string
 }
 
+const errors = ref({
+    nome: false,
+    preco: false,
+    categoria: false
+})
+
 const DEFAULT_NUTRI_FIELDS = [
     'Porção',
     'Valor Energético',
@@ -80,6 +86,8 @@ watch(() => props.show, (newVal) => {
 
             existingImages.value = p.imagens ? [...p.imagens] : []
 
+            errors.value = { nome: false, preco: false, categoria: false }
+
         } else {
             resetForm()
         }
@@ -88,6 +96,42 @@ watch(() => props.show, (newVal) => {
 
 watch(form, () => { formChanged.value = true }, { deep: true })
 watch(nutritionalItems, () => { formChanged.value = true }, { deep: true })
+
+const validateForm = () => {
+    let isValid = true
+
+    if (!form.value.nome.trim()) {
+        errors.value.nome = true
+        isValid = false
+    } else {
+        errors.value.nome = false
+    }
+
+    if (!form.value.preco_unitario) {
+        errors.value.preco = true
+        isValid = false
+    } else {
+        errors.value.preco = false
+    }
+
+    if (form.value.isNovaCategoria) {
+        if (!form.value.novaCategoria.trim()) {
+            errors.value.categoria = true
+            isValid = false
+        } else {
+            errors.value.categoria = false
+        }
+    } else {
+        if (!form.value.categoriaId) {
+            errors.value.categoria = true
+            isValid = false
+        } else {
+            errors.value.categoria = false
+        }
+    }
+
+    return isValid
+}
 
 const loadDefaultNutri = () => {
     nutritionalItems.value = DEFAULT_NUTRI_FIELDS.map(name => ({ name, value: '' }))
@@ -168,6 +212,8 @@ const removeNewImage = (index: number) => {
 
 const handleSubmit = () => {
     if (props.loading) return
+
+    if (!validateForm()) return
 
     const nutriObject = nutritionalItems.value.reduce((acc, item) => {
         if (item.name.trim()) acc[item.name] = item.value
@@ -250,33 +296,45 @@ const handleSubmit = () => {
 
                     <div class="form-grid">
                         <div class="form-group full-width">
-                            <label>Nome do Produto</label>
-                            <input type="text" v-model="form.nome" placeholder="Ex: Chocolate Belga" />
+                            <label>Nome do Produto <span class="required">*</span></label>
+                            <input type="text" v-model="form.nome" placeholder="Ex: Chocolate Belga"
+                                :class="{ 'error-border': errors.nome }" @input="errors.nome = false" />
+                            <span v-if="errors.nome" class="error-msg">O nome é obrigatório.</span>
                         </div>
                         <div class="form-group">
-                            <label>Preço (R$)</label>
-                            <input type="number" step="0.01" v-model="form.preco_unitario" placeholder="0.00" />
+                            <label>Preço (R$) <span class="required">*</span></label>
+                            <input type="number" step="0.01" v-model="form.preco_unitario" placeholder="0.00"
+                                :class="{ 'error-border': errors.preco }" @input="errors.preco = false" />
+                            <span v-if="errors.preco" class="error-msg">Informe o valor.</span>
                         </div>
                         <div class="form-group">
                             <label class="label-flex">
-                                Categoria
+                                Categoria <span class="required">*</span>
                                 <span class="toggle-link" @click="form.isNovaCategoria = !form.isNovaCategoria">
                                     {{ form.isNovaCategoria ? 'Selecionar existente' : '+ Nova Categoria' }}
                                 </span>
                             </label>
-                            <input v-if="form.isNovaCategoria" type="text" v-model="form.novaCategoria"
-                                placeholder="Nome da nova categoria" class="input-highlight" />
-                            <div v-else class="select-wrapper">
-                                <select v-model="form.categoriaId">
-                                    <option value="" disabled>Selecione...</option>
-                                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nome }}
-                                    </option>
-                                </select>
+
+                            <div class="input-wrapper-cat">
+                                <input v-if="form.isNovaCategoria" type="text" v-model="form.novaCategoria"
+                                    placeholder="Nome da nova categoria" class="input-highlight"
+                                    :class="{ 'error-border': errors.categoria }" @input="errors.categoria = false" />
+
+                                <div v-else class="select-wrapper">
+                                    <select v-model="form.categoriaId" :class="{ 'error-border': errors.categoria }"
+                                        @change="errors.categoria = false">
+                                        <option value="" disabled>Selecione...</option>
+                                        <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nome }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <span v-if="errors.categoria" class="error-msg">Selecione ou crie uma categoria.</span>
                             </div>
                         </div>
                         <div class="form-group full-width">
                             <label>Descrição</label>
-                            <textarea v-model="form.descricao" rows="2" placeholder="Uma breve descrição..."></textarea>
+                            <textarea v-model="form.descricao" rows="3" class="resizable-vertical"
+                                placeholder="Uma breve descrição..."></textarea>
                         </div>
                     </div>
 
@@ -287,7 +345,8 @@ const handleSubmit = () => {
                     <div class="form-grid">
                         <div class="form-group full-width">
                             <label>Ingredientes</label>
-                            <textarea v-model="form.ingredientes" rows="2" placeholder="Leite, açúcar..."></textarea>
+                            <textarea v-model="form.ingredientes" rows="4" class="resizable-vertical"
+                                placeholder="Leite, açúcar..."></textarea>
                         </div>
                         <div class="form-group full-width">
                             <label>Alérgicos</label>
@@ -554,6 +613,37 @@ const handleSubmit = () => {
     font-size: 0.95rem;
     background: white;
     transition: all 0.2s;
+}
+
+textarea.resizable-vertical {
+    resize: vertical;
+    min-height: 80px;
+    width: 100%;
+}
+
+.error-border {
+    border-color: #ff4d4f !important;
+    background-color: #fff1f0 !important;
+    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.1);
+}
+
+.error-msg {
+    color: #ff4d4f;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    display: block;
+    font-weight: 500;
+}
+
+.required {
+    color: #ff4d4f;
+    margin-left: 2px;
+}
+
+.input-wrapper-cat {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
 }
 
 .form-group input:focus,

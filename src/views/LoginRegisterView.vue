@@ -891,6 +891,7 @@ onMounted(() => {
 .success-icon {
     font-size: 4rem;
     color: #4CAF50;
+    border-radius: 50%;
     animation: pulse-green 2s infinite;
 }
 

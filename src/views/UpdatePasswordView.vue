@@ -16,10 +16,11 @@ const translateSupabaseError = (msg: string) => {
     return msg
 }
 
-
 onMounted(async () => {
-    window.scrollTo(0, 0);;
+    window.scrollTo(0, 0)
+
     const { data: { session } } = await supabase.auth.getSession()
+
     if (!session) {
         alert('Link inválido ou expirado. Por favor, solicite novamente.')
         router.push('/login')
@@ -52,7 +53,7 @@ const handleUpdate = async () => {
         feedbackType.value = 'error'
         isLoading.value = false
     } else {
-        feedbackMsg.value = 'Senha atualizada com sucesso!'
+        feedbackMsg.value = 'Senha atualizada com sucesso! Redirecionando...'
         feedbackType.value = 'success'
         setTimeout(() => {
             router.push('/perfil')
@@ -68,7 +69,7 @@ const handleUpdate = async () => {
             <div class="auth-header">
                 <div class="icon-lock">🔒</div>
                 <h1>Nova Senha</h1>
-                <p>Crie uma senha segura para sua conta</p>
+                <p>Crie uma senha segura para acessar o Ice Point</p>
             </div>
 
             <div v-if="feedbackMsg" :class="['alert-box', feedbackType]">
@@ -88,7 +89,7 @@ const handleUpdate = async () => {
                 </div>
 
                 <button type="submit" :disabled="isLoading" class="btn-primary">
-                    <span v-if="!isLoading">Salvar Nova Senha</span>
+                    <span v-if="!isLoading">Salvar e Entrar</span>
                     <span v-else class="loader"></span>
                 </button>
 
@@ -108,6 +109,7 @@ const handleUpdate = async () => {
     align-items: center;
     min-height: 80vh;
     padding: 20px;
+    background-color: #f8f9fa;
 }
 
 .auth-card {
@@ -174,6 +176,7 @@ const handleUpdate = async () => {
     color: var(--c-text-dark);
     transition: all 0.3s ease;
     outline: none;
+    box-sizing: border-box;
 }
 
 .input-group input:focus {

@@ -44,11 +44,16 @@ export const useUserStore = defineStore('user', () => {
     firstName.value = 'Meu Perfil'
   }
 
-  function forceLogout() {
-    console.warn('[Store] Logout forçado por inconsistência.')
-    supabase.auth.signOut()
+  async function forceLogout() {
+    console.warn('[Store] Sessão inválida ou expirada. Realizando logout forçado...')
+    try {
+      await supabase.auth.signOut()
+    } catch (e) {}
     resetState()
-    router.push('/login')
+
+    if (router.currentRoute.value.meta.requiresAuth) {
+      router.push('/login')
+    }
   }
 
   async function fetchUserProfile(token: string): Promise<boolean> {
@@ -58,7 +63,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        if (response.status === 401) throw new Error('Token expirado ou inválido')
+        if (response.status === 401 || response.status === 403) {
+          console.error('[API] Token recusado pelo backend.')
+          await forceLogout()
+          return false
+        }
         throw new Error('Erro na API: ' + response.statusText)
       }
 
@@ -70,7 +79,11 @@ export const useUserStore = defineStore('user', () => {
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser()
-      const avatar = authUser?.user_metadata?.avatar_url || authUser?.user_metadata?.picture || null
+
+      const authAvatar =
+        authUser?.user_metadata?.avatar_url || authUser?.user_metadata?.picture || null
+
+      const finalAvatarUrl = userData.avatarUrl || authAvatar || null
 
       user.value = {
         id: userData.userId,
@@ -81,7 +94,7 @@ export const useUserStore = defineStore('user', () => {
         cpf: userData.cpf || '',
         birthDate: userData.birthDate || '',
         addresses: userData.addresses || [],
-        avatarUrl: avatar,
+        avatarUrl: finalAvatarUrl,
       } as UserProfile
 
       isAuthenticated.value = true
@@ -97,12 +110,28 @@ export const useUserStore = defineStore('user', () => {
     if (isReady.value) return
 
     isLoading.value = true
+
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[Auth] Evento Disparado: ${event}`)
+
+      if (event === 'SIGNED_OUT') {
+        resetState()
+        if (router.currentRoute.value.meta.requiresAuth) {
+          router.push('/login')
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('[Auth] Token renovado com sucesso.')
+        // Opcional: Recarregar perfil se necessário, mas geralmente não precisa
+      }
+    })
+
     try {
       const {
         data: { session },
+        error,
       } = await supabase.auth.getSession()
 
-      if (!session) {
+      if (error || !session) {
         resetState()
       } else {
         console.log('[Store] Sessão recuperada. Buscando perfil...')
@@ -111,7 +140,6 @@ export const useUserStore = defineStore('user', () => {
         if (success) {
           await checkCartTransfer()
         } else {
-          await supabase.auth.signOut()
           resetState()
         }
       }
@@ -242,8 +270,13 @@ export const useUserStore = defineStore('user', () => {
   async function updateProfile(payload: any) {
     const {
       data: { session },
+      error,
     } = await supabase.auth.getSession()
-    if (!session) throw new Error('Sem sessão')
+
+    if (error || !session) {
+      await forceLogout()
+      throw new Error('Sessão expirada. Faça login novamente.')
+    }
 
     const response = await fetch(`${API_URL}/users/profile`, {
       method: 'PUT',
@@ -259,6 +292,52 @@ export const useUserStore = defineStore('user', () => {
     await fetchUserProfile(session.access_token)
   }
 
+  async function uploadAvatar(file: File) {
+    isLoading.value = true
+    try {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession()
+
+      if (error || !session) {
+        throw new Error('Sessão expirada')
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // Usando fetch para manter o padrão do seu store
+      const response = await fetch(`${API_URL}/users/profile/avatar`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          // Nota: Não setar 'Content-Type': 'multipart/form-data' manualmente com fetch,
+          // o browser faz isso automaticamente incluindo o boundary correto.
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao enviar imagem')
+      }
+
+      const result = await response.json()
+
+      // Atualiza o estado local imediatamente para refletir na tela
+      if (user.value && result.avatarUrl) {
+        user.value.avatarUrl = result.avatarUrl
+      }
+
+      return true
+    } catch (e) {
+      console.error('[Store] Erro no upload do avatar:', e)
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     user,
     isAuthenticated,
@@ -272,6 +351,7 @@ export const useUserStore = defineStore('user', () => {
     logout,
     register,
     updateProfile,
+    uploadAvatar,
     supabase,
   }
 })

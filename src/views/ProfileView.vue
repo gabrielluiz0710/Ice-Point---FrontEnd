@@ -7,7 +7,12 @@ import {
     faKey,
     faSignOutAlt,
     faAward,
-    faChartLine
+    faChartLine,
+    faCamera,
+    faEye,
+    faPen,
+    faSpinner,
+    faTimes
 } from '@fortawesome/free-solid-svg-icons'
 import { useUserStore } from '@/stores/user'
 import { storeToRefs } from 'pinia'
@@ -15,11 +20,19 @@ import { storeToRefs } from 'pinia'
 import ProfilePersonalData from '@/components/profile/ProfilePersonalData.vue'
 import ProfileMyOrders from '@/components/profile/ProfileMyOrders.vue'
 import ProfileChangePassword from '@/components/profile/ProfileChangePassword.vue'
+import AvatarUploadModal from '@/components/profile/AvatarUploadModal.vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-const { isLoading } = storeToRefs(userStore)
+const { isLoading, user } = storeToRefs(userStore)
+
+const fileInput = ref<HTMLInputElement | null>(null)
+const isUploading = ref(false)
+const showUploadModal = ref(false)
+const selectedFile = ref<File | null>(null)
+const previewUrl = ref<string | null>(null)
+const showImageViewer = ref(false)
 
 type ProfileTab = 'personalData' | 'orders' | 'changePassword'
 const activeTab = ref<ProfileTab>('personalData')
@@ -46,9 +59,8 @@ const isAdminOrStaff = computed(() => {
     return role === 'ADMIN' || role === 'FUNCIONARIO'
 })
 
-onMounted(() => {
+onMounted(async () => {
     window.scrollTo(0, 0);
-    console.log('[ProfileView] Montado! isLoading inicial:', isLoading.value);
 
     const tabFromQuery = route.query.tab as string | undefined;
     if (tabFromQuery === 'orders' || tabFromQuery === 'changePassword') {
@@ -60,10 +72,80 @@ function logout() {
     console.log('Saindo da conta...')
     userStore.logout()
 }
+
+function triggerFileInput() {
+    fileInput.value?.click()
+}
+
+function viewAvatar() {
+    if (user.value?.avatarUrl) {
+        showImageViewer.value = true
+    }
+}
+
+function handleFileChange(event: Event) {
+    const input = event.target as HTMLInputElement
+    if (!input.files || input.files.length === 0) return
+
+    const file = input.files[0]
+
+    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+        alert('Apenas arquivos JPG, JPEG ou PNG são permitidos.')
+        return
+    }
+
+    selectedFile.value = file
+    previewUrl.value = URL.createObjectURL(file)
+    showUploadModal.value = true
+
+    input.value = ''
+}
+
+function closeUploadModal() {
+    showUploadModal.value = false
+    selectedFile.value = null
+    if (previewUrl.value) {
+        URL.revokeObjectURL(previewUrl.value)
+        previewUrl.value = null
+    }
+}
+
+async function confirmUpload() {
+    if (!selectedFile.value) return
+
+    try {
+        isUploading.value = true
+        await userStore.uploadAvatar(selectedFile.value)
+
+        closeUploadModal()
+    } catch (error) {
+        alert('Erro ao salvar a foto. Tente novamente.')
+        isUploading.value = false
+    }
+}
 </script>
 
 <template>
     <div class="profile-view">
+        <input type="file" ref="fileInput" class="hidden-input" accept="image/jpeg, image/png, image/jpg"
+            @change="handleFileChange" />
+
+        <AvatarUploadModal :is-open="showUploadModal" :preview-url="previewUrl" :is-loading="isUploading"
+            @close="closeUploadModal" @confirm="confirmUpload" @retry="triggerFileInput" />
+
+        <Teleport to="body">
+            <transition name="zoom-fade">
+                <div v-if="showImageViewer" class="image-viewer-overlay" @click="showImageViewer = false">
+                    <button class="close-viewer-btn" @click.stop="showImageViewer = false">
+                        <font-awesome-icon :icon="faTimes" />
+                    </button>
+                    <div class="image-viewer-content" @click.stop>
+                        <img :src="userStore.user?.avatarUrl" alt="Foto Ampliada" class="full-size-image" />
+                    </div>
+                </div>
+            </transition>
+        </Teleport>
+
         <div v-if="isLoading || !userStore.user" class="profile-grid">
             <aside class="profile-sidebar skeleton-sidebar">
                 <div class="user-greeting">
@@ -93,12 +175,25 @@ function logout() {
         <div v-else class="profile-grid fade-in-content">
             <aside class="profile-sidebar">
                 <div class="user-greeting">
-                    <div v-if="userStore.user.avatarUrl" class="avatar-image-container">
-                        <img :src="userStore.user.avatarUrl" alt="Foto de Perfil" class="avatar-img"
-                            referrerpolicy="no-referrer" />
-                    </div>
-                    <div v-else class="avatar-icon">
-                        <font-awesome-icon :icon="faAward" />
+                    <div class="avatar-wrapper">
+                        <div v-if="userStore.user.avatarUrl" class="avatar-image-container">
+                            <img :src="userStore.user.avatarUrl" alt="Foto de Perfil" class="avatar-img"
+                                referrerpolicy="no-referrer" />
+
+                            <div class="avatar-overlay">
+                                <button @click.stop="viewAvatar" class="overlay-btn" title="Visualizar Foto">
+                                    <font-awesome-icon :icon="faEye" />
+                                </button>
+                                <div class="overlay-divider"></div>
+                                <button @click.stop="triggerFileInput" class="overlay-btn" title="Trocar Foto">
+                                    <font-awesome-icon :icon="faPen" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-else class="avatar-icon clickable" @click="triggerFileInput">
+                            <font-awesome-icon :icon="faCamera" />
+                        </div>
                     </div>
                     <h2 class="greeting-title">Meu Perfil</h2>
                     <p class="greeting-name">Olá, {{ userStore.user?.nome?.split(' ')[0] || 'Cliente' }}</p>
@@ -482,5 +577,175 @@ function logout() {
     .form-grid-skeleton {
         grid-template-columns: 1fr;
     }
+}
+
+.hidden-input {
+    display: none;
+}
+
+.avatar-wrapper {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 1rem;
+}
+
+.avatar-image-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    padding: 3px;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+    overflow: hidden;
+    border: 2px solid var(--c-azul);
+    position: relative;
+}
+
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.avatar-icon {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--c-azul), var(--c-azul-light));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 4px 15px rgba(218, 96, 118, 0.4);
+}
+
+.avatar-icon.clickable {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.avatar-icon.clickable:hover {
+    transform: scale(1.05);
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+}
+
+.avatar-image-container:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.overlay-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 5px;
+    transition: transform 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay-btn:hover {
+    transform: scale(1.2);
+    color: var(--c-rosa);
+}
+
+.overlay-divider {
+    width: 1px;
+    height: 16px;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.image-viewer-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+.image-viewer-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: default;
+}
+
+.full-size-image {
+    display: block;
+    max-width: 100%;
+    max-height: 85vh;
+    object-fit: contain;
+}
+
+.close-viewer-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    z-index: 10001;
+}
+
+.close-viewer-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.zoom-fade-enter-active,
+.zoom-fade-leave-active {
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.zoom-fade-enter-from,
+.zoom-fade-leave-to {
+    opacity: 0;
+}
+
+.zoom-fade-enter-from .image-viewer-content {
+    transform: scale(0.8);
+}
+
+.zoom-fade-leave-to .image-viewer-content {
+    transform: scale(0.8);
 }
 </style>
