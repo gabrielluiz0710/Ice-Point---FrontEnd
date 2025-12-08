@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useCartStore, type CartItem, type DBProduct } from '@/stores/cart';
+import { useCartStore, type DBProduct } from '@/stores/cart';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faInfoCircle, faIceCream } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'vue-router';
@@ -76,8 +76,13 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
             </div>
         </div>
         <div class="card-content">
-            <h3 class="product-name">{{ product.nome }}</h3>
+            <div class="header-group">
+                <h3 class="product-name">{{ product.nome }}</h3>
+                <span class="product-category-label">{{ product.categoria?.nome }}</span>
+            </div>
+
             <p class="product-description">{{ product.descricao }}</p>
+
             <div class="card-footer">
                 <span class="product-price">R$ {{ displayPrice.toFixed(2) }}</span>
                 <div class="quantity-control">
@@ -101,17 +106,18 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
     flex-direction: column;
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     border: 2px solid transparent;
+    height: 100%;
 }
 
 .product-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .product-card.in-cart {
-    border: 3px solid;
+    border: 2px solid;
     border-color: var(--c-rosa);
-    box-shadow: 0 8px 16px rgba(254, 117, 143, 0.2);
+    box-shadow: 0 6px 14px rgba(254, 117, 143, 0.2);
 }
 
 .card-image-container {
@@ -123,10 +129,10 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
 
 .info-control {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 30px;
-    height: 30px;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
     background-color: rgba(0, 0, 0, 0.5);
     color: white;
     border-radius: 50%;
@@ -138,6 +144,7 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    font-size: 0.9rem;
 }
 
 .product-card:hover .info-control {
@@ -147,7 +154,6 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
 
 .info-control:hover {
     background-color: var(--c-azul);
-    box-shadow: 0 0 10px var(--c-azul-dark);
 }
 
 .product-icon-fallback {
@@ -160,15 +166,13 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
 }
 
 .product-icon-fallback .fallback-icon {
-    font-size: 5rem;
+    font-size: 4rem;
     color: var(--c-rosa);
     opacity: 0.5;
-    max-width: 80%;
-    max-height: 80%;
 }
 
 .product-card:hover .product-icon-fallback {
-    transform: scale(1.1);
+    transform: scale(1.05);
     transition: transform 0.4s ease;
 }
 
@@ -180,29 +184,48 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
 }
 
 .product-card:hover .product-image {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .card-content {
-    padding: 1.25rem;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
 }
 
-.product-name {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--c-text-dark);
+.header-group {
     margin-bottom: 0.5rem;
 }
 
+.product-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--c-text-dark);
+    margin-bottom: 0.1rem;
+    line-height: 1.2;
+}
+
+.product-category-label {
+    font-size: 0.75rem;
+    color: #999;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: block;
+}
+
 .product-description {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--c-text);
-    line-height: 1.5;
-    margin-bottom: 1rem;
+    line-height: 1.4;
+    margin-bottom: 0.8rem;
     flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .card-footer {
@@ -213,7 +236,7 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
 }
 
 .product-price {
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--c-azul);
 }
@@ -228,10 +251,10 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
     background-color: var(--c-rosa);
     color: var(--c-branco);
     border: none;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
     cursor: pointer;
     display: flex;
@@ -239,6 +262,7 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
     justify-content: center;
     line-height: 1;
     transition: background-color 0.2s ease, transform 0.2s ease;
+    padding-bottom: 3px;
 }
 
 .quantity-btn:hover {
@@ -247,28 +271,67 @@ const displayImage = computed(() => props.product.imagemCapa || 'URL_DO_SEU_PLAC
 }
 
 .quantity-input {
-    min-width: 40px;
-    max-width: 80px;
+    min-width: 30px;
+    max-width: 60px;
     text-align: center;
     border: none;
     background: transparent;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--c-text-dark);
     -moz-appearance: textfield;
     appearance: textfield;
-    background-color: rgb(237, 237, 237);
+    background-color: rgb(240, 240, 240);
     border-radius: 5px;
-    padding: 5px;
-    margin-left: 5px;
-    margin-right: 5px;
+    padding: 6px 6px;
+    margin-left: 4px;
+    margin-right: 4px;
     font-family: 'Fredoka', sans-serif;
-    transition: width 0.2s ease-in-out;
 }
 
 .quantity-input::-webkit-outer-spin-button,
 .quantity-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+}
+
+@media (max-width: 768px) {
+    .card-image-container {
+        height: 150px;
+    }
+
+    .card-content {
+        padding: 0.8rem;
+    }
+
+    .product-name {
+        font-size: 1.1rem;
+    }
+
+    .product-category-label {
+        font-size: 0.7rem;
+    }
+
+    .product-description {
+        font-size: 0.8rem;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        margin-bottom: 0.7rem;
+    }
+
+    .product-price {
+        font-size: 1.3rem;
+    }
+
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
+
+    .quantity-input {
+        font-size: 1.1rem;
+        padding: 8px 6px;
+    }
 }
 </style>

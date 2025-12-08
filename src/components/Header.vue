@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue';
-import { faShoppingCart, faUser, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import { ref, onMounted, onUnmounted, onBeforeUnmount, computed } from 'vue';
+import { faShoppingCart, faUser, faSignOutAlt, faIceCream, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { useUserStore } from '@/stores/user'
-import { RouterLink, useRouter } from 'vue-router';
+import { RouterLink, useRouter, useRoute } from 'vue-router';
+import { useCartStore } from '@/stores/cart'
 
 const isSidebarOpen = ref(false);
 
@@ -10,6 +11,8 @@ const navigationHeaderRef = ref<HTMLElement | null>(null);
 const sidebarToggleButtonRef = ref<HTMLElement | null>(null);
 const lastScrollY = ref(0);
 const isHeaderVisible = ref(true);
+const isAlertVisible = ref(true);
+let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const handleScroll = () => {
     if (isSidebarOpen.value) {
@@ -60,7 +63,27 @@ const handleClickOutside = (event: MouseEvent) => {
 };
 
 const userStore = useUserStore()
+const cartStore = useCartStore()
 const router = useRouter()
+const route = useRoute()
+
+const showPendingCartAlert = computed(() => {
+    const hasItems = cartStore.totalCartQuantity > 0;
+
+    const forbiddenRoutes = [
+        'carrinho',
+        'checkout',
+        'OrderConfirmation',
+        'login',
+        'admin-dashboard',
+        'admin-produtos',
+        'admin-usuarios'
+    ];
+
+    const isForbiddenRoute = forbiddenRoutes.includes(route.name as string);
+
+    return hasItems && !isForbiddenRoute && isAlertVisible.value;
+});
 
 const handleProfileClick = () => {
     if (userStore.isAuthenticated) {
@@ -75,13 +98,16 @@ const handleProfileClick = () => {
 onMounted(() => {
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('scroll', handleScroll);
-
+    alertTimeout = setTimeout(() => {
+        isAlertVisible.value = false;
+    }, 5000);
 });
 
 onUnmounted(() => {
     document.removeEventListener('mousedown', handleClickOutside);
-});
 
+    if (alertTimeout) clearTimeout(alertTimeout);
+});
 onBeforeUnmount(() => {
     window.removeEventListener('scroll', handleScroll);
 });
@@ -108,8 +134,11 @@ onBeforeUnmount(() => {
                 <RouterLink to="/produtos">Produtos</RouterLink>
                 <RouterLink to="/localizacao">Localização</RouterLink>
                 <RouterLink to="/contatos">Contato</RouterLink>
-                <RouterLink to="/carrinho">
-                    <font-awesome-icon :icon="faShoppingCart" />
+                <RouterLink to="/carrinho" class="cart-link-desktop">
+                    <div class="icon-wrapper">
+                        <font-awesome-icon :icon="faShoppingCart" />
+                        <span v-if="cartStore.totalCartQuantity > 0" class="cart-badge-dot"></span>
+                    </div>
                     <span>Montar Carrinho</span>
                 </RouterLink>
                 <a href="#" @click.prevent="handleProfileClick">
@@ -144,7 +173,9 @@ onBeforeUnmount(() => {
 
             <div class="mobile-actions">
                 <RouterLink to="/carrinho" class="action-btn-mobile" @click="closeSidebar">
-                    <font-awesome-icon :icon="faShoppingCart" />
+                    <div class="icon-wrapper-mobile"> <font-awesome-icon :icon="faShoppingCart" />
+                        <span v-if="cartStore.totalCartQuantity > 0" class="cart-badge-dot-mobile"></span>
+                    </div>
                     <span>Montar Carrinho</span>
                 </RouterLink>
                 <a href="#" class="action-btn-mobile" @click.prevent="handleProfileClick">
@@ -168,6 +199,23 @@ onBeforeUnmount(() => {
                 </a>
             </div>
         </nav>
+        <Transition name="slide-fade">
+            <div v-if="showPendingCartAlert" class="pending-cart-bar" @click="router.push('/carrinho')">
+                <div class="pending-content">
+                    <div class="pending-icon">
+                        <font-awesome-icon :icon="faIceCream" bounce />
+                    </div>
+                    <div class="pending-text">
+                        <span class="highlight">{{ cartStore.totalCartQuantity }} itens</span> esperando no carrinho
+                    </div>
+                    <div class="pending-action">
+                        <span>Ver</span>
+                        <font-awesome-icon :icon="faArrowRight" />
+                    </div>
+                </div>
+                <div class="loading-line"></div>
+            </div>
+        </Transition>
     </header>
 </template>
 
@@ -187,6 +235,130 @@ onBeforeUnmount(() => {
     width: 100%;
     z-index: 1000;
     box-shadow: 0 4px 15px rgba(100, 50, 50, 0.15);
+}
+
+.pending-cart-bar {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(90deg, var(--c-azul-dark) 0%, var(--c-azul) 100%);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    z-index: 999;
+}
+
+.pending-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+    gap: 1rem;
+    font-size: 0.95rem;
+}
+
+.pending-icon {
+    color: var(--c-rosa-light);
+    font-size: 1.1rem;
+}
+
+.pending-text {
+    font-weight: 500;
+}
+
+.pending-text .highlight {
+    font-weight: 700;
+    color: var(--c-rosa-light);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.pending-action {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+}
+
+.pending-cart-bar:hover .pending-action {
+    background: white;
+    color: var(--c-azul);
+}
+
+.loading-line {
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-rosa), var(--c-branco));
+    width: 100%;
+    animation: loading 2s infinite linear;
+    transform-origin: 0% 50%;
+}
+
+@keyframes loading {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.slide-fade-enter-active {
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.slide-fade-leave-active {
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+    transform: translateY(-100%);
+    opacity: 0;
+    z-index: -1;
+}
+
+.icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cart-badge-dot {
+    position: absolute;
+    top: -5px;
+    right: -8px;
+    width: 10px;
+    height: 10px;
+    background-color: var(--c-azul);
+    border: 2px solid var(--c-rosa);
+    border-radius: 50%;
+}
+
+.icon-wrapper-mobile {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cart-badge-dot-mobile {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--c-azul);
+    border-radius: 50%;
+    border: 2px solid rgba(218, 96, 118, 0.9);
 }
 
 .logo-container {

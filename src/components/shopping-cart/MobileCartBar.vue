@@ -10,6 +10,7 @@ interface CartItem {
     name: string
     price: number
     quantity: number
+    category?: string
 }
 
 defineProps<{
@@ -84,6 +85,8 @@ function goToCheckout() {
                         <li v-for="item in cartItems" :key="item.id" class="summary-item">
                             <div class="item-info-left">
                                 <span class="item-name">{{ item.name }}</span>
+                                <span class="item-category" v-if="item.category">{{ item.category }}</span>
+
                                 <span class="item-details">{{ item.quantity }} x R$ {{ item.price.toFixed(2) }}</span>
                             </div>
                             <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
@@ -281,7 +284,7 @@ function goToCheckout() {
 }
 
 .mobile-cart-bar.expanded .expanded-view {
-    max-height: 50vh;
+    max-height: 70vh;
     margin-top: 1.5rem;
 }
 
@@ -395,6 +398,16 @@ function goToCheckout() {
 .item-details {
     color: var(--c-text-light);
     font-size: 0.9rem;
+}
+
+.item-category {
+    font-size: 0.60rem;
+    color: #999;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+    display: block;
 }
 
 .item-total {
