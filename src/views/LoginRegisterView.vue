@@ -124,6 +124,12 @@ const handleAuth = async () => {
     try {
         if (isLoginMode.value) {
             await userStore.login(email.value, password.value)
+
+            const redirectPath = router.currentRoute.value.query.redirect as string;
+            if (redirectPath) {
+                router.push(redirectPath);
+                return;
+            }
         } else {
             const { data: { session } } = await userStore.supabase.auth.getSession()
             const token = session?.access_token
@@ -153,8 +159,6 @@ const handleAuth = async () => {
 
             } catch (apiError) {
                 console.error('Erro ao consultar backend:', apiError);
-                // Se sua API cair, você decide: bloqueia ou deixa tentar cadastrar?
-                // Sugiro deixar passar para o supabase.auth tentar tratar
             }
 
             const isoDate = convertDateToISO(birthDate.value)
@@ -660,7 +664,6 @@ onMounted(() => {
     color: #4267B2;
 }
 
-/* ALERTAS */
 .alert-box {
     padding: 12px 16px;
     border-radius: 10px;

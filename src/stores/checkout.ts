@@ -21,6 +21,12 @@ interface AddressData {
   state: string
 }
 
+export interface SelectedCart {
+  color: string
+  quantity: number
+  cartIds?: number[]
+}
+
 const personalDataSchema = yup.object({
   fullName: yup
     .string()
@@ -65,7 +71,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
   const paymentMethod = ref<'pix' | 'cash' | 'card'>('pix')
   const agreedToTerms = ref(false)
   const isCepLoading = ref(false)
-
+  const selectedCarts = ref<SelectedCart[]>([])
   const showDeliveryFee = computed(() => deliveryMethod.value === 'delivery')
 
   const showDiscount = computed(
@@ -107,6 +113,33 @@ export const useCheckoutStore = defineStore('checkout', () => {
     paymentMethod.value = 'pix'
   })
 
+  const totalPopsicles = computed(() => {
+    return cartStore.cartItems.reduce((acc, item) => acc + item.quantity, 0)
+  })
+
+  const requiredCartsCount = computed(() => {
+    const total = totalPopsicles.value
+    if (total === 0) return 0
+    return Math.ceil(total / 250)
+  })
+
+  const isCartSelectionComplete = computed(() => {
+    const totalSelected = selectedCarts.value.reduce((acc, c) => acc + c.quantity, 0)
+    return totalSelected === requiredCartsCount.value
+  })
+
+  function resetState() {
+    personalData.value = {} as PersonalData
+    address.value = {} as AddressData
+    deliveryAddress.value = {} as AddressData
+    useSameAddressForDelivery.value = true
+    deliveryMethod.value = null
+    schedule.value = { date: '', time: '' }
+    paymentMethod.value = 'pix'
+    agreedToTerms.value = false
+    selectedCarts.value = []
+  }
+
   return {
     personalData,
     address,
@@ -125,5 +158,10 @@ export const useCheckoutStore = defineStore('checkout', () => {
     showDeliveryFee,
     showDiscount,
     lookupCep,
+    selectedCarts,
+    totalPopsicles,
+    requiredCartsCount,
+    isCartSelectionComplete,
+    resetState,
   }
 })

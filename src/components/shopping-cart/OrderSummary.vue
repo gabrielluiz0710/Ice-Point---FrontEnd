@@ -56,7 +56,8 @@ function confirmEmptyCart() {
                         <div class="item-info">
                             <span class="item-name">{{ item.name }}</span>
                             <span class="item-category" v-if="item.category">{{ item.category }}</span>
-                            <span class="item-details">{{ item.quantity }} x R$ {{ item.price.toFixed(2) }}</span>
+                            <span class="item-details"><strong class="strong">{{ item.quantity }}x</strong> R$ {{
+                                item.price.toFixed(2) }}</span>
                         </div>
                         <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
                     </li>
@@ -112,13 +113,17 @@ function confirmEmptyCart() {
     overflow: auto;
     flex: 1 1 auto;
     min-height: 0;
-    padding-right: 0.5rem;
-    padding-bottom: 0.5rem;
-}
 
-.summary-body {
-    scrollbar-width: thin;
-    scrollbar-color: var(--c-rosa) rgba(0, 0, 0, 0.04);
+    /* --- ALTERAÇÃO AQUI --- */
+    /* 1. Margem Negativa: Puxa a barra de rolagem para a direita, 
+       ocupando o espaço do padding do pai */
+    margin-right: -1.5rem;
+
+    /* 2. Padding Interno: Empurra o texto de volta para a esquerda 
+       para ele alinhar com o título e não ficar colado na barra */
+    padding-right: 1.5rem;
+
+    padding-bottom: 0.5rem;
 }
 
 .summary-body::-webkit-scrollbar {
@@ -130,6 +135,10 @@ function confirmEmptyCart() {
     background: transparent;
     border-radius: 999px;
     margin: 4px 0;
+}
+
+.strong {
+    font-weight: 900;
 }
 
 .summary-body::-webkit-scrollbar-thumb {
@@ -268,12 +277,13 @@ function confirmEmptyCart() {
 }
 
 .item-category {
-    font-size: 0.60rem;
+    font-size: 0.75rem;
     color: #999;
     text-transform: uppercase;
     font-weight: 600;
     margin-bottom: 2px;
     letter-spacing: 0.5px;
+    display: block;
 }
 
 .item-details {

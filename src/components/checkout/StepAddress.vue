@@ -19,22 +19,29 @@ import {
     faExclamationTriangle,
     faLocationArrow,
     faMapMarkedAlt,
-    faQuestionCircle
+    faQuestionCircle,
+    faHome
 } from '@fortawesome/free-solid-svg-icons'
 import type { InferType } from 'yup'
+import { useUserStore } from '@/stores/user'
+import CartSelectionStep from './CartSelectionStep.vue'
 
 const checkoutStore = useCheckoutStore()
+const userStore = useUserStore()
 const emit = defineEmits(['completed'])
 const isCepLoading = ref(false)
 const isAddressSectionFilled = ref(false)
 const cepInputRef = ref<HTMLInputElement | null>(null);
 const isDeliveryCepLoading = ref(false);
 const additionalAddressFormRef = ref<HTMLElement | null>(null);
+const selectedAddressId = ref<number | null>(null);
+
 const setCepInputRef = (el: Element | ComponentPublicInstance | null) => {
     if (el instanceof HTMLInputElement) {
         cepInputRef.value = el;
     }
 }
+
 const showCepNotFoundErrorModal = ref(false);
 const lastInvalidCepField = ref<'main' | 'delivery' | null>(null);
 const showCityErrorModal = ref(false);
@@ -63,6 +70,13 @@ const availableTimes = computed(() => {
         times.push(`${String(hour).padStart(2, '0')}:00`);
     }
     return times;
+});
+
+const savedAddresses = computed(() => {
+    if (userStore.isAuthenticated && userStore.user?.addresses) {
+        return userStore.user.addresses;
+    }
+    return [];
 });
 
 const schema = yup.object({
@@ -136,7 +150,37 @@ const initialValues = {
             : null,
 };
 
-const { setFieldValue, values, setFieldError } = useForm({
+function selectSavedAddress(addr: any) {
+    selectedAddressId.value = addr.id;
+
+    setFieldValue('cep', applyMask(addr.zip, '#####-###'));
+    setFieldValue('street', addr.street);
+    setFieldValue('number', addr.number);
+    setFieldValue('complement', addr.complement || '');
+    setFieldValue('neighborhood', addr.neighborhood);
+    setFieldValue('city', addr.city);
+    setFieldValue('state', addr.state);
+
+    isAddressSectionFilled.value = true;
+    showCityErrorModal.value = false;
+    showInvalidMainAddressModal.value = false;
+}
+
+function clearSelection() {
+    selectedAddressId.value = null;
+    setFieldValue('cep', '');
+    setFieldValue('street', '');
+    setFieldValue('number', '');
+    setFieldValue('complement', '');
+    setFieldValue('neighborhood', '');
+    setFieldValue('city', '');
+    setFieldValue('state', '');
+
+    isAddressSectionFilled.value = false;
+    setTimeout(() => cepInputRef.value?.focus(), 100);
+}
+
+const { setFieldValue, values, setFieldError, handleSubmit, meta } = useForm({
     validationSchema: schema,
     initialValues: initialValues,
 });
@@ -211,7 +255,14 @@ function handleUseSameAddress(city: string, onChange: (value: boolean) => void) 
 }
 
 onMounted(() => {
-    cepInputRef.value?.focus();
+    if (savedAddresses.value.length > 0 && !checkoutStore.address.cep) {
+        const principal = savedAddresses.value.find(a => a.principal);
+        if (principal) {
+            selectSavedAddress(principal);
+        }
+    } else {
+        cepInputRef.value?.focus();
+    }
 
     if (checkoutStore.address.cep && checkoutStore.address.street) {
         isAddressSectionFilled.value = true;
@@ -248,6 +299,10 @@ async function handleCepLookup(cepValue: string, setFieldValueFn: Function, isDe
     if (cep.length !== 8) {
         console.log(`[handleCepLookup] ⚠️ Tamanho do CEP inválido. Abortando.`);
         return;
+    }
+
+    if (!isDelivery) {
+        selectedAddressId.value = null;
     }
 
     const prefix = isDelivery ? 'delivery_' : '';
@@ -350,6 +405,35 @@ function applyMask(value: string, mask: string): string {
     return maskedValue;
 }
 
+watch(values, (newValues) => {
+    if (savedAddresses.value.length) {
+        const match = savedAddresses.value.find(addr => {
+            const addrZipMasked = applyMask(addr.zip || '', '#####-###');
+            return (
+                addrZipMasked === newValues.cep &&
+                addr.street === newValues.street &&
+                addr.number === newValues.number &&
+                (addr.complement || '') === (newValues.complement || '') &&
+                addr.neighborhood === newValues.neighborhood &&
+                addr.city === newValues.city &&
+                addr.state === newValues.state
+            );
+        });
+        selectedAddressId.value = match ? (match.id ?? null) : null;
+    }
+
+    if (newValues.deliveryMethod === 'delivery' && newValues.useSameAddressForDelivery) {
+        if (newValues.city && newValues.city !== 'Uberaba') {
+
+            if (!showInvalidMainAddressModal.value) {
+                showInvalidMainAddressModal.value = true;
+            }
+
+            setFieldValue('useSameAddressForDelivery', false);
+        }
+    }
+}, { deep: true });
+
 function handleInput(event: Event, mask: string | undefined, fieldOnChange: (value: any) => void) {
     if (!mask) {
         fieldOnChange((event.target as HTMLInputElement).value);
@@ -360,9 +444,8 @@ function handleInput(event: Event, mask: string | undefined, fieldOnChange: (val
     fieldOnChange(maskedValue);
 }
 
-function onSubmit(formValues: any) {
-    checkoutStore.useSameAddressForDelivery = formValues.useSameAddressForDelivery;
-
+const onSubmit = handleSubmit((formValues) => {
+    checkoutStore.useSameAddressForDelivery = formValues.useSameAddressForDelivery ?? false;
     if (formValues.deliveryMethod === 'delivery' && !formValues.useSameAddressForDelivery) {
         checkoutStore.deliveryAddress = {
             cep: formValues.delivery_cep,
@@ -402,7 +485,7 @@ function onSubmit(formValues: any) {
     checkoutStore.schedule = { date: formValues.scheduleDate, time: formValues.scheduleTime };
 
     emit('completed');
-}
+});
 
 function getRef(field: { name: string }) {
     if (field.name === 'cep') {
@@ -410,6 +493,16 @@ function getRef(field: { name: string }) {
     }
     return undefined;
 }
+
+const dateTimeKey = computed(() => {
+    if (!values.scheduleDate || !values.scheduleTime) return undefined;
+
+    return `${values.scheduleDate}-${values.scheduleTime}`;
+});
+
+watch([() => values.scheduleDate, () => values.scheduleTime], () => {
+    checkoutStore.selectedCarts = [];
+})
 </script>
 
 <template>
@@ -454,8 +547,23 @@ function getRef(field: { name: string }) {
         </div>
     </Transition>
 
-    <Form @submit="onSubmit" :validation-schema="schema" :initial-values="initialValues" :keep-values="true"
-        v-slot="{ meta, setFieldValue, values }">
+    <form @submit="onSubmit">
+        <div v-if="savedAddresses.length > 0" class="saved-addresses-section">
+            <h3 class="section-subtitle-endereco">Meus Endereços</h3>
+            <div class="address-cards-grid">
+                <div v-for="addr in savedAddresses" :key="addr.id" class="address-card"
+                    :class="{ active: selectedAddressId === addr.id }" @click="selectSavedAddress(addr)">
+                    <div class="card-header-addr">
+                        <font-awesome-icon :icon="faHome" />
+                        <span v-if="addr.principal" class="principal-tag">Principal</span>
+                    </div>
+                    <p class="addr-text"><strong>{{ addr.street }}, {{ addr.number }}</strong></p>
+                    <p class="addr-text">{{ addr.neighborhood }}</p>
+                    <p class="addr-text">{{ addr.city }} - {{ addr.state }}</p>
+                    <p class="addr-text cep">{{ addr.zip }}</p>
+                </div>
+            </div>
+        </div>
         <fieldset :disabled="isCepLoading" class="form-fieldset">
             <div class="form-grid">
                 <div v-for="(fieldData, index) in addressFormFields" :key="fieldData.name" class="form-field"
@@ -587,15 +695,97 @@ function getRef(field: { name: string }) {
             </div>
         </div>
 
-        <button type="submit" class="action-button" :disabled="!meta.valid || isCepLoading || isDeliveryCepLoading">
+        <Transition name="fade-step">
+            <div v-if="values.scheduleDate && values.scheduleTime" class="cart-step-wrapper">
+                <h3 class="section-subtitle-endereco">Seleção de Carrinhos</h3>
+
+                <CartSelectionStep :key="dateTimeKey" @completed="() => { }" />
+            </div>
+        </Transition>
+
+        <button type="submit" class="action-button"
+            :disabled="!meta.valid || isCepLoading || isDeliveryCepLoading || !checkoutStore.isCartSelectionComplete">
+
             <span v-if="isCepLoading">Buscando CEP...</span>
+            <span v-else-if="!checkoutStore.isCartSelectionComplete && values.scheduleDate">
+                Selecione os Carrinhos
+            </span>
             <span v-else>Ir para Pagamento</span>
+
             <font-awesome-icon v-if="!isCepLoading" :icon="faArrowRight" />
         </button>
     </Form>
 </template>
 
 <style scoped>
+.cart-step-wrapper {
+    margin-top: 2rem;
+    border-top: 1px dashed var(--color-border);
+    padding-top: 2rem;
+}
+
+.saved-addresses-section {
+    margin-bottom: 2rem;
+}
+
+.address-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.address-card {
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--c-branco);
+}
+
+.address-card:hover {
+    border-color: var(--c-azul-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.address-card.active {
+    border-color: var(--c-azul);
+    background-color: #f0f9ff;
+    box-shadow: 0 0 0 2px rgba(25, 197, 203, 0.2);
+}
+
+.card-header-addr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: var(--c-azul);
+}
+
+.principal-tag {
+    background-color: var(--c-azul);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.addr-text {
+    font-size: 0.9rem;
+    color: var(--c-text);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.addr-text.cep {
+    color: var(--c-text-light);
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+
 .delivery-details-wrapper {
     margin-top: 1.5rem;
     padding: 1.5rem;
@@ -735,6 +925,13 @@ function getRef(field: { name: string }) {
 .form-fieldset:disabled {
     opacity: 0.5;
     pointer-events: none;
+}
+
+.section-subtitle-endereco {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--c-text);
+    margin-bottom: 1rem;
 }
 
 .section-subtitle {

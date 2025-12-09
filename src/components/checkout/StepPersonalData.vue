@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useCheckoutStore } from '@/stores/checkout'
+import { useUserStore } from '@/stores/user'
 import { Field, Form, ErrorMessage } from 'vee-validate'
 import * as yup from 'yup'
 import {
@@ -8,15 +9,44 @@ import {
     faEnvelope,
     faIdCard,
     faMobileAlt,
-    faCalendarAlt
+    faCalendarAlt,
+    faSignInAlt,
+    faUserSecret,
+    faCheck,
+    faLock
 } from '@fortawesome/free-solid-svg-icons'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '@/service/supabase'
 
 const checkoutStore = useCheckoutStore()
+const userStore = useUserStore()
+const router = useRouter()
 const emit = defineEmits(['completed'])
 const showAgeModal = ref(false)
 
 const firstInputRef = ref<HTMLInputElement | null>(null)
+const isGuestMode = ref(false)
+
+const isLoggedIn = computed(() => userStore.isAuthenticated)
+const user = computed(() => userStore.user)
+
+const showForm = computed(() => isLoggedIn.value || isGuestMode.value)
+
+const enableGuestMode = () => {
+    isGuestMode.value = true;
+    setTimeout(() => {
+        firstInputRef.value?.focus()
+    }, 100);
+}
+
+const userProfileMap: Record<string, 'nome' | 'email' | 'cpf' | 'phone' | 'birthDate'> = {
+    fullName: 'nome',
+    email: 'email',
+    cpf: 'cpf',
+    phone: 'phone',
+    birthDate: 'birthDate'
+}
 
 type PersonalData = typeof checkoutStore.personalData;
 
@@ -30,9 +60,89 @@ interface FormField {
     inputmode?: 'numeric' | 'text' | 'tel' | 'email';
 }
 
-onMounted(() => {
-    firstInputRef.value?.focus()
-})
+const formatDateFromDb = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    if (dateString.includes('/')) return dateString;
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+}
+
+function applyMask(value: string, mask: string): string {
+    if (!value) return '';
+
+    const cleanValue = value.replace(/\D/g, '');
+    let maskedValue = '';
+    let digitIndex = 0;
+
+    for (let i = 0; i < mask.length; i++) {
+        if (digitIndex >= cleanValue.length) {
+            break;
+        }
+        const maskChar = mask[i];
+        if (maskChar === '#') {
+            maskedValue += cleanValue[digitIndex];
+            digitIndex++;
+        } else {
+            maskedValue += maskChar;
+        }
+    }
+    return maskedValue;
+}
+
+const populateUserData = () => {
+    if (!isLoggedIn.value) return;
+
+    if (user.value) {
+        if (checkoutStore.personalData.email && checkoutStore.personalData.email !== user.value.email) {
+            checkoutStore.resetState();
+        }
+
+        if (!checkoutStore.personalData.fullName && user.value.nome)
+            checkoutStore.personalData.fullName = user.value.nome;
+
+        if (!checkoutStore.personalData.email && user.value.email)
+            checkoutStore.personalData.email = user.value.email;
+
+        if (!checkoutStore.personalData.phone && user.value.phone)
+            checkoutStore.personalData.phone = applyMask(user.value.phone, '(##) #####-####');
+
+        if (!checkoutStore.personalData.cpf && user.value.cpf)
+            checkoutStore.personalData.cpf = applyMask(user.value.cpf, '###.###.###-##');
+
+        if (!checkoutStore.personalData.birthDate && user.value.birthDate)
+            checkoutStore.personalData.birthDate = formatDateFromDb(user.value.birthDate);
+    }
+}
+
+const isFieldFromDatabase = (fieldName: string) => {
+    if (!isLoggedIn.value || !user.value) return false;
+    const userKey = userProfileMap[fieldName];
+    return !!user.value[userKey];
+}
+
+onMounted(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session) {
+        await userStore.fetchUserProfile(session.access_token);
+    }
+
+    if (isLoggedIn.value) {
+        populateUserData();
+    }
+});
+
+watch(isLoggedIn, (newVal) => {
+    if (newVal) {
+        populateUserData();
+    } else {
+        checkoutStore.resetState();
+    }
+});
+
+const handleLoginRedirect = () => {
+    router.push({ path: '/login', query: { redirect: '/checkout' } });
+}
 
 const schema = yup.object({
     fullName: yup.string().required('O nome é obrigatório').min(3, 'Digite seu nome completo'),
@@ -82,28 +192,6 @@ const formFields: FormField[] = [
     { name: 'birthDate', label: 'Data de Nascimento', type: 'text', mask: '##/##/####', placeholder: 'DD/MM/AAAA', icon: faCalendarAlt, inputmode: 'numeric' },
 ]
 
-function applyMask(value: string, mask: string): string {
-    if (!value) return '';
-
-    const cleanValue = value.replace(/\D/g, '');
-    let maskedValue = '';
-    let digitIndex = 0;
-
-    for (let i = 0; i < mask.length; i++) {
-        if (digitIndex >= cleanValue.length) {
-            break;
-        }
-        const maskChar = mask[i];
-        if (maskChar === '#') {
-            maskedValue += cleanValue[digitIndex];
-            digitIndex++;
-        } else {
-            maskedValue += maskChar;
-        }
-    }
-    return maskedValue;
-}
-
 function handleInput(event: Event, mask: string | undefined, fieldOnChange: (value: any) => void) {
     if (!mask) {
         fieldOnChange((event.target as HTMLInputElement).value);
@@ -140,23 +228,59 @@ function onSubmit(values: any) {
 </script>
 
 <template>
-    <Form @submit="onSubmit" :validation-schema="schema" :initial-values="checkoutStore.personalData"
+    <div v-if="!showForm" class="auth-choice-container">
+        <p class="auth-choice-title">Como você deseja continuar?</p>
+        <div class="auth-choice-grid">
+            <button class="choice-card login-card" @click="handleLoginRedirect">
+                <font-awesome-icon :icon="faSignInAlt" class="choice-icon" />
+                <div class="choice-text">
+                    <strong>Já sou cliente</strong>
+                    <span>Fazer login para carregar meus dados</span>
+                </div>
+            </button>
+
+            <button class="choice-card guest-card" @click="enableGuestMode">
+                <font-awesome-icon :icon="faUserSecret" class="choice-icon" />
+                <div class="choice-text">
+                    <strong>Novo por aqui</strong>
+                    <span>Continuar sem cadastro (Convidado)</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <Form v-else @submit="onSubmit" :validation-schema="schema" :initial-values="checkoutStore.personalData"
         :validate-on-input="true" v-slot="{ meta }">
+
+        <div v-if="isLoggedIn" class="logged-in-badge">
+            <font-awesome-icon :icon="faUser" />
+            <span>Identificado como <strong>{{ user?.nome }}</strong></span>
+        </div>
+
         <div class="form-grid">
             <div v-for="(fieldData, index) in formFields" :key="fieldData.name" class="form-field"
                 :style="{ animationDelay: `${index * 80}ms` }">
                 <label :for="fieldData.name">{{ fieldData.label }}</label>
-                <div class="input-wrapper">
+
+                <div class="input-wrapper" :class="{ 'input-disabled': isLoggedIn && fieldData.name === 'email' }">
+
                     <font-awesome-icon v-if="fieldData.icon" :icon="fieldData.icon" class="input-icon" />
 
-
                     <Field :name="fieldData.name" v-model="checkoutStore.personalData[fieldData.name]"
-                        v-slot="{ field: veeField }">
+                        v-slot="{ field: veeField, meta }">
+
                         <input v-bind="veeField" :placeholder="fieldData.placeholder" :type="fieldData.type"
                             :id="fieldData.name" :inputmode="fieldData.inputmode"
+                            :disabled="isLoggedIn && fieldData.name === 'email'"
                             @input="handleInput($event, fieldData.mask, veeField.onChange)"
                             @blur="fieldData.name === 'birthDate' ? checkAgeAndShowModal(veeField.value) : null"
-                            :ref="el => { if (index === 0) firstInputRef = el as HTMLInputElement }" />
+                            :ref="el => { if (index === 0 && !isLoggedIn) firstInputRef = el as HTMLInputElement }" />
+
+                        <font-awesome-icon v-if="isLoggedIn && fieldData.name === 'email'" :icon="faLock"
+                            class="status-icon locked" />
+
+                        <font-awesome-icon v-else-if="meta.valid && meta.dirty" :icon="faCheck"
+                            class="status-icon success" />
                     </Field>
                 </div>
                 <ErrorMessage :name="fieldData.name" class="error-message" />
@@ -164,10 +288,11 @@ function onSubmit(values: any) {
         </div>
 
         <button type="submit" class="action-button" :disabled="!meta.valid">
-            Continuar para Endereço
+            {{ isLoggedIn ? 'Confirmar e Avançar' : 'Continuar para Endereço' }}
             <font-awesome-icon :icon="faArrowRight" />
         </button>
     </Form>
+
     <Teleport to="body">
         <Transition name="fade">
             <div v-if="showAgeModal" class="age-modal-overlay">
@@ -182,6 +307,130 @@ function onSubmit(values: any) {
 </template>
 
 <style scoped>
+.status-icon {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.status-icon.locked {
+    color: #6b7280;
+}
+
+.status-icon.success {
+    color: #10b981;
+    animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes pop-in {
+    0% {
+        transform: translateY(-50%) scale(0);
+    }
+
+    100% {
+        transform: translateY(-50%) scale(1);
+    }
+}
+
+.input-wrapper.input-disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.input-wrapper.input-disabled input {
+    background-color: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #6b7280;
+}
+
+.locked-icon {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    transform: translateY(-50%);
+    color: #166534;
+    font-size: 0.9rem;
+}
+
+.auth-choice-container {
+    padding: 1rem 0;
+    text-align: center;
+    animation: fade-in 0.5s ease;
+}
+
+.auth-choice-title {
+    font-size: 1.1rem;
+    color: var(--c-text-dark);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.auth-choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+@media(max-width: 600px) {
+    .auth-choice-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.choice-card {
+    background: var(--c-branco);
+    border: 2px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    color: var(--c-text);
+    font-family: var(--font-title);
+}
+
+.choice-card:hover {
+    border-color: var(--c-azul);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.choice-icon {
+    font-size: 2rem;
+    color: var(--c-azul);
+}
+
+.choice-text strong {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+}
+
+.choice-text span {
+    font-size: 0.85rem;
+    color: var(--c-text-light);
+}
+
+.logged-in-badge {
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.95rem;
+}
+
 @keyframes field-enter {
     from {
         opacity: 0;

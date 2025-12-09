@@ -67,10 +67,8 @@ const cartStore = useCartStore()
 const router = useRouter()
 const route = useRoute()
 
-const showPendingCartAlert = computed(() => {
-    const hasItems = cartStore.totalCartQuantity > 0;
-
-    const forbiddenRoutes = [
+const isForbiddenRoute = computed(() => {
+    const forbidden = [
         'carrinho',
         'checkout',
         'OrderConfirmation',
@@ -79,10 +77,15 @@ const showPendingCartAlert = computed(() => {
         'admin-produtos',
         'admin-usuarios'
     ];
+    return forbidden.includes(route.name as string);
+});
 
-    const isForbiddenRoute = forbiddenRoutes.includes(route.name as string);
+const shouldShowBadges = computed(() => {
+    return cartStore.totalCartQuantity > 0 && !isForbiddenRoute.value;
+});
 
-    return hasItems && !isForbiddenRoute && isAlertVisible.value;
+const showPendingCartAlert = computed(() => {
+    return shouldShowBadges.value && isAlertVisible.value;
 });
 
 const handleProfileClick = () => {
@@ -137,7 +140,7 @@ onBeforeUnmount(() => {
                 <RouterLink to="/carrinho" class="cart-link-desktop">
                     <div class="icon-wrapper">
                         <font-awesome-icon :icon="faShoppingCart" />
-                        <span v-if="cartStore.totalCartQuantity > 0" class="cart-badge-dot"></span>
+                        <span v-if="shouldShowBadges" class="cart-badge-dot"></span>
                     </div>
                     <span>Montar Carrinho</span>
                 </RouterLink>
@@ -174,7 +177,7 @@ onBeforeUnmount(() => {
             <div class="mobile-actions">
                 <RouterLink to="/carrinho" class="action-btn-mobile" @click="closeSidebar">
                     <div class="icon-wrapper-mobile"> <font-awesome-icon :icon="faShoppingCart" />
-                        <span v-if="cartStore.totalCartQuantity > 0" class="cart-badge-dot-mobile"></span>
+                        <span v-if="shouldShowBadges" class="cart-badge-dot-mobile"></span>
                     </div>
                     <span>Montar Carrinho</span>
                 </RouterLink>

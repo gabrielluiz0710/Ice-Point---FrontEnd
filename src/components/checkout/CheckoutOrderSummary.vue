@@ -21,7 +21,10 @@ const checkoutStore = useCheckoutStore()
                 :style="{ transitionDelay: `${index * 50}ms` }">
                 <div class="item-info">
                     <span class="item-quantity">{{ item.quantity }}x</span>
-                    <span class="item-name">{{ item.name }}</span>
+                    <div class="text-container">
+                        <span class="item-name">{{ item.name }}</span>
+                        <span class="item-category" v-if="item.category">{{ item.category }}</span>
+                    </div>
                 </div>
                 <span class="item-price">R$ {{ (item.price * item.quantity).toFixed(2).replace('.', ',') }}</span>
             </li>
@@ -129,6 +132,22 @@ const checkoutStore = useCheckoutStore()
     padding: 0.2rem 0.5rem;
     min-width: 28px;
     text-align: center;
+}
+
+.text-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.2;
+}
+
+.item-category {
+    font-size: 0.7rem;
+    color: #999;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
 }
 
 .item-name {

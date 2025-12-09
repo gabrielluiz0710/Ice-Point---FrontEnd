@@ -166,6 +166,16 @@ onMounted(() => {
                                     <p class="summary-value">{{ checkoutStore.deliveryMethod === 'delivery' ? 'Entrega'
                                         : 'Retirada' }}</p>
                                 </div>
+
+                                <div class="summary-item full-width" v-if="checkoutStore.selectedCarts.length > 0">
+                                    <span class="summary-label">Carrinhos Selecionados</span>
+                                    <div class="selected-carts-list">
+                                        <span v-for="(cart, index) in checkoutStore.selectedCarts" :key="index"
+                                            class="cart-tag">
+                                            <strong>{{ cart.quantity }}x</strong> {{ cart.color }}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div v-if="checkoutStore.deliveryMethod === 'delivery'" class="address-summary-card">
@@ -352,9 +362,29 @@ onMounted(() => {
     color: var(--c-text);
 }
 
+.summary-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.selected-carts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.cart-tag {
+    background-color: #f1f5f9;
+    color: var(--c-azul);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    text-transform: capitalize;
+    border: 1px solid #e2e8f0;
+}
+
 .address-summary-card {
     background-color: #f8f9fa;
-    /* Um cinza bem claro */
     border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 1.5rem;
@@ -390,7 +420,6 @@ onMounted(() => {
     margin-top: 0.5rem;
 }
 
-/* Responsividade */
 @media (max-width: 576px) {
     .summary-grid {
         grid-template-columns: 1fr;
