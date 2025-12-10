@@ -10,9 +10,21 @@ const checkoutStore = useCheckoutStore()
 const cartStore = useCartStore()
 const emit = defineEmits(['completed', 'back'])
 
+interface CartDetail {
+    id: number
+    identificacao: string
+    cor: string
+    capacidade: number
+}
+
+const availability = ref<{
+    totalAvailable: number,
+    byColor: Record<string, number>,
+    details: CartDetail[]
+} | null>(null)
+
 const isLoading = ref(true)
 const error = ref('')
-const availability = ref<{ totalAvailable: number, byColor: Record<string, number> } | null>(null)
 const selections = ref<Record<string, number>>({})
 
 const cartImages: Record<string, string> = {
@@ -36,11 +48,14 @@ const progressPercentage = computed(() => {
 })
 
 const fetchAvailability = async () => {
+    if (!checkoutStore.schedule.date || !checkoutStore.schedule.time) {
+        error.value = 'Data ou horário não selecionados. Por favor, volte para a etapa anterior.'
+        isLoading.value = false
+        return
+    }
+
     isLoading.value = true
     error.value = ''
-    selections.value = {}
-    checkoutStore.selectedCarts = []
-
     try {
         const dateTimeStr = `${checkoutStore.schedule.date}T${checkoutStore.schedule.time}:00`
 
@@ -60,11 +75,31 @@ const fetchAvailability = async () => {
         const data = await response.json()
         availability.value = data
 
+        const newSelections: Record<string, number> = {}
+
         if (data.byColor) {
             Object.keys(data.byColor).forEach(color => {
-                selections.value[color] = 0
+                newSelections[color] = 0
             })
+
+            if (checkoutStore.selectedCarts && checkoutStore.selectedCarts.length > 0) {
+                checkoutStore.selectedCarts.forEach(savedItem => {
+                    const matchingKey = Object.keys(newSelections).find(
+                        k => k.toLowerCase() === savedItem.color.toLowerCase()
+                    )
+
+                    if (matchingKey) {
+                        const maxAvailable = data.byColor[matchingKey] || 0
+                        const qtyToRestore = Math.min(savedItem.quantity, maxAvailable)
+
+                        newSelections[matchingKey] = qtyToRestore
+                    }
+                })
+            }
         }
+
+        selections.value = newSelections
+
     } catch (err) {
         console.error(err)
         error.value = 'Não foi possível verificar a disponibilidade. Tente outro horário.'
@@ -94,15 +129,41 @@ const decrement = (color: string) => {
 }
 
 watch(selections, (newSelections) => {
+    const availableDetails = availability.value?.details || []
+
+    if (availableDetails.length === 0 && availability.value) {
+        console.warn('⚠️ API retornou disponibilidade, mas a lista de "details" está vazia!')
+    }
+
     const finalSelection = Object.entries(newSelections)
         .filter(([_, qty]) => qty > 0)
-        .map(([color, qty]) => ({ color, quantity: qty }))
+        .map(([colorKey, qty]) => {
+            const cartsOfThisColor = availableDetails.filter(c =>
+                c.cor && c.cor.toLowerCase() === colorKey.toLowerCase()
+            )
+
+            const selectedIds = cartsOfThisColor
+                .slice(0, qty)
+                .map(c => c.id)
+
+            console.log(`Cor: ${colorKey}, Qtd: ${qty}, IDs encontrados:`, selectedIds)
+
+            return {
+                color: colorKey,
+                quantity: qty,
+                cartIds: selectedIds
+            }
+        })
 
     checkoutStore.selectedCarts = finalSelection
 }, { deep: true })
 
 onMounted(() => {
-    fetchAvailability()
+    checkoutStore.loadFromStorage()
+
+    setTimeout(() => {
+        fetchAvailability()
+    }, 100)
 })
 </script>
 
@@ -464,7 +525,7 @@ onMounted(() => {
 
     .header-right {
         width: 100%;
-        text-align: right;
+        text-align: center;
     }
 }
 </style>

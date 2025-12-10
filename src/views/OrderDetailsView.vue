@@ -1,23 +1,40 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { supabase } from '@/service/supabase'
 import {
-    faBox,
+    faBoxOpen,
     faClipboardCheck,
-    faTruck,
-    faHouseUser,
-    faUser,
-    faMapMarkerAlt,
+    faTruckFast,
+    faHouseCircleCheck,
+    faUserCircle,
+    faLocationDot,
     faCreditCard,
     faMoneyBillWave,
     faQrcode,
     faChevronLeft,
     faSpinner,
-    faIceCream
+    faIceCream,
+    faBan,
+    faEnvelope,
+    faPhone,
+    faReceipt,
+    faCheckCircle,
+    faClock
 } from '@fortawesome/free-solid-svg-icons'
 
 const route = useRoute()
 const router = useRouter()
+const API_URL = import.meta.env.VITE_API_URL
+
+const cartImages: Record<string, string> = {
+    'azul': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/azul.webp',
+    'rosa': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/rosa.webp',
+    'misto': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/misto.webp',
+    'azul/rosa': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/misto.webp',
+    'default': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/misto.webp'
+}
+
 interface OrderItem {
     id: number
     name: string
@@ -25,220 +42,415 @@ interface OrderItem {
     price: number
     image: string
 }
+
 interface Order {
     id: string
-    status: 'Pedido Recebido' | 'Em preparação' | 'A caminho' | 'Entregue'
+    status: string
+    displayStatus: string
     date: string
     time: string
-    customer: { name: string }
-    delivery: { method: 'delivery' | 'pickup', address: string }
-    payment: { method: 'pix' | 'cash' | 'card' }
+    customer: {
+        name: string
+        email: string
+        phone: string
+    }
+    delivery: {
+        method: 'delivery' | 'pickup'
+        address: string
+    }
+    payment: { method: string }
+    cart: {
+        name: string
+        image: string
+    }
     items: OrderItem[]
     summary: { deliveryFee: number, discount: number }
+}
+
+interface BackendOrder {
+    id: number
+    status: string
+    dataSolicitacao: string
+    dataAgendada: string
+    horaAgendada: string
+    nomeCliente: string
+    emailCliente: string
+    telefoneCliente: string
+    metodoEntrega: string
+    enderecoLogradouro: string
+    enderecoNumero: string
+    enderecoBairro: string
+    enderecoCidade: string
+    enderecoEstado: string
+    metodoPagamento: string
+    taxaEntrega: string | number
+    valorDesconto: string | number
+    carrinhos: { id: number, cor: string, identificacao: string }[]
+    itens: {
+        id: number
+        quantidade: number
+        precoUnitarioCongelado: string | number
+        produto: {
+            nome: string
+            imagemCapa: string | null
+        }
+    }[]
+}
+
+const goBackToOrders = () => {
+    router.push({ path: '/perfil', query: { tab: 'orders' } })
 }
 
 const order = ref<Order | null>(null)
 const isLoading = ref(true)
 
-const generateMockOrderData = (id: string): Order => {
-    const statuses: Order['status'][] = ['Pedido Recebido', 'Em preparação', 'A caminho', 'Entregue']
-    const names = ['Ana Silva', 'Bruno Costa', 'Carla Dias', 'Daniel Alves', 'Eduarda Lima', 'Fabio Souza']
 
-    let seed = Array.from(id).reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    if (isNaN(seed)) seed = 0;
+const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
 
-    const allProducts: Omit<OrderItem, 'quantity'>[] = [
-        { id: 7, name: 'Brigadeiro Skimo', price: 4.0, image: '/src/assets/images/cards/brigadeiro.png' },
-        { id: 5, name: 'Ituzinho de Maracujá', price: 3.5, image: '/src/assets/images/cards/itumaracuja.png' },
-        { id: 1, name: 'Limão Suíço', price: 2.0, image: '/src/assets/images/cards/limaosuico.png' },
-        { id: 8, name: 'Tentação', price: 4.0, image: '/src/assets/images/cards/tentacao.png' },
-        { id: 6, name: 'Ituzinho Leite Condensado', price: 3.5, image: '/src/assets/images/cards/ituleitecondensado.png' },
-        { id: 2, name: 'Milho Verde', price: 2.0, image: '/src/assets/images/cards/milho.png' },
-    ];
+const formatDate = (dateString: string) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(date)
+}
 
-    const orderItems: OrderItem[] = [];
-    let totalQuantity = 0;
-    let productIndex = seed % allProducts.length;
+const formatTime = (dateString: string) => {
+    if (!dateString) return ''
+    if (dateString.includes(':') && dateString.length <= 8) return dateString.substring(0, 5);
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date)
+}
 
-    while (totalQuantity < 80) {
-        const productToAdd = allProducts[productIndex];
-
-        const quantity = 10 + ((seed + totalQuantity) % 16);
-
-        orderItems.push({
-            ...productToAdd,
-            quantity: quantity
-        });
-
-        totalQuantity += quantity;
-        productIndex = (productIndex + 1) % allProducts.length;
+const getDisplayStatus = (status: string) => {
+    const map: Record<string, string> = {
+        'PENDENTE': 'Pendente',
+        'AGUARDANDO_PAGAMENTO': 'Aguardando Pagamento',
+        'PAGO': 'Pago',
+        'CONFIRMADO': 'Confirmado',
+        'EM_PREPARACAO': 'Em Preparação',
+        'SAIU_PARA_ENTREGA': 'Saiu para Entrega',
+        'ENTREGUE': 'Entregue',
+        'CANCELADO': 'Cancelado'
     }
+    return map[status] || status
+}
 
-    return {
-        id,
-        status: statuses[seed % statuses.length],
-        date: `${10 + (seed % 18)} de Setembro, 2025`,
-        time: `${10 + (seed % 10)}:${10 + (seed % 49)}`,
-        customer: { name: names[seed % names.length] },
-        delivery: {
-            method: seed % 2 === 0 ? 'delivery' : 'pickup',
-            address: `Rua das Flores, ${100 + seed * 3}, Uberlândia - MG`,
-        },
-        payment: { method: seed % 3 === 0 ? 'pix' : seed % 3 === 1 ? 'card' : 'cash' },
-        items: orderItems,
-        summary: {
-            deliveryFee: seed % 2 === 0 ? 5.0 : 0.0,
-            discount: parseFloat(((1 + seed % 5) * 0.5).toFixed(2)),
-        },
+const fetchOrderDetails = async (orderId: string) => {
+    isLoading.value = true
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { router.push('/login'); return }
+
+        const response = await fetch(`${API_URL}/encomendas/${orderId}`, {
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (!response.ok) throw new Error('Pedido não encontrado na API')
+
+        const data: BackendOrder = await response.json()
+
+        let rawCartColor = 'Misto';
+        if (data.carrinhos && data.carrinhos.length > 0) {
+            rawCartColor = data.carrinhos[0].cor || 'Misto';
+        }
+
+        const normalizedColor = rawCartColor.toLowerCase();
+        const cartImgUrl = cartImages[normalizedColor] || cartImages['default'];
+
+        order.value = {
+            id: String(data.id),
+            status: data.status,
+            displayStatus: getDisplayStatus(data.status),
+            date: formatDate(data.dataAgendada || data.dataSolicitacao),
+            time: data.horaAgendada || formatTime(data.dataSolicitacao),
+            customer: {
+                name: data.nomeCliente || 'Cliente',
+                email: data.emailCliente || 'Email não informado',
+                phone: data.telefoneCliente || 'Telefone não informado'
+            },
+            delivery: {
+                method: data.metodoEntrega === 'DELIVERY' ? 'delivery' : 'pickup',
+                address: data.metodoEntrega === 'DELIVERY'
+                    ? `${data.enderecoLogradouro}, ${data.enderecoNumero} - ${data.enderecoBairro}, ${data.enderecoCidade} - ${data.enderecoEstado}`
+                    : 'Retirada na Loja'
+            },
+            payment: { method: data.metodoPagamento },
+            cart: {
+                name: rawCartColor.charAt(0).toUpperCase() + rawCartColor.slice(1),
+                image: cartImgUrl
+            },
+            summary: {
+                deliveryFee: Number(data.taxaEntrega),
+                discount: Number(data.valorDesconto)
+            },
+            items: data.itens.map(item => ({
+                id: item.id,
+                name: item.produto.nome,
+                quantity: item.quantidade,
+                price: Number(item.precoUnitarioCongelado),
+                image: item.produto.imagemCapa || '/img/placeholder.png'
+            }))
+        }
+    } catch (error) {
+        console.error("Erro no processamento do pedido:", error)
+        order.value = null
+    } finally {
+        isLoading.value = false
     }
 }
 
-const subtotal = computed(() =>
-    order.value?.items.reduce((total, item) => total + item.price * item.quantity, 0) || 0
-)
-const totalItems = computed(() =>
-    order.value?.items.reduce((total, item) => total + item.quantity, 0) || 0
-)
-const grandTotal = computed(() =>
-    (subtotal.value + (order.value?.summary.deliveryFee || 0)) - (order.value?.summary.discount || 0)
-)
+const subtotal = computed(() => order.value?.items.reduce((t, i) => t + i.price * i.quantity, 0) || 0)
+const grandTotal = computed(() => (subtotal.value + (order.value?.summary.deliveryFee || 0)) - (order.value?.summary.discount || 0))
+
 const paymentDetails = computed(() => {
-    if (!order.value) return { label: '', icon: faCreditCard }
-    switch (order.value.payment.method) {
-        case 'pix': return { label: 'Pix', icon: faQrcode }
-        case 'cash': return { label: 'Dinheiro', icon: faMoneyBillWave }
-        case 'card': return { label: 'Cartão de Crédito', icon: faCreditCard }
-        default: return { label: 'Não informado', icon: faCreditCard }
-    }
+    if (!order.value) return { label: '...', icon: faCreditCard, color: '#64748b' }
+    const m = order.value.payment.method
+    if (m === 'PIX') return { label: 'Pix', icon: faQrcode, color: '#32BCAD' }
+    if (m === 'CASH') return { label: 'Dinheiro', icon: faMoneyBillWave, color: '#16a34a' }
+    if (m === 'CARD' || m === 'ONLINE') return { label: 'Cartão', icon: faCreditCard, color: '#2563eb' }
+    return { label: m, icon: faCreditCard, color: '#64748b' }
 })
 
-const statusSteps = ['Pedido Recebido', 'Em preparação', 'A caminho', 'Entregue']
+const statusSteps = [
+    { label: 'Recebido', icon: faClipboardCheck },
+    { label: 'Confirmado', icon: faCheckCircle },
+    { label: 'Preparo', icon: faBoxOpen },
+    { label: 'A Caminho', icon: faTruckFast },
+    { label: 'Entregue', icon: faHouseCircleCheck }
+]
+
 const currentStatusIndex = computed(() => {
     if (!order.value) return 0
-    return statusSteps.indexOf(order.value.status) + 1
+    const s = order.value.status
+
+    if (s === 'CANCELADO') return -1
+
+    if (['PENDENTE', 'AGUARDANDO_PAGAMENTO'].includes(s)) return 1
+    if (['PAGO', 'CONFIRMADO'].includes(s)) return 2
+    if (s === 'EM_PREPARACAO') return 3
+    if (s === 'SAIU_PARA_ENTREGA') return 4
+    if (s === 'ENTREGUE') return 5
+
+    return 1
 })
 
 onMounted(() => {
     window.scrollTo(0, 0)
-    setTimeout(() => {
-        const orderId = route.params.id as string
-
-        if (orderId && orderId.length > 0) {
-            console.log(`Gerando dados para o pedido ID: ${orderId}`)
-            order.value = generateMockOrderData(orderId)
-        } else {
-            console.error(`ID de pedido inválido ou não encontrado na URL: ${orderId}`)
-            order.value = null
-        }
-        isLoading.value = false
-    }, 1000)
+    const orderId = route.params.id as string
+    if (orderId) fetchOrderDetails(orderId)
 })
 </script>
 
 <template>
-    <div class="order-detail-view">
-        <div v-if="isLoading" class="loading-container">
-            <font-awesome-icon :icon="faSpinner" spin-pulse class="loading-icon" />
-            <h2>Carregando seu pedido...</h2>
-        </div>
+    <div class="page-background">
+        <div class="content-wrapper">
 
-        <div v-else-if="!order" class="loading-container">
-            <h2>Ops! Pedido não encontrado.</h2>
-            <button class="back-btn" @click="router.push('/perfil?tab=orders')">
-                <font-awesome-icon :icon="faChevronLeft" /> Voltar para Meus Pedidos
-            </button>
-        </div>
+            <div v-if="isLoading" class="state-container">
+                <div class="loader-pulse">
+                    <font-awesome-icon :icon="faSpinner" spin />
+                </div>
+                <p>Carregando detalhes...</p>
+            </div>
 
-        <div v-else class="main-content">
-            <div class="header-container">
-                <button class="back-btn" @click="router.push('/perfil?tab=orders')">
-                    <font-awesome-icon :icon="faChevronLeft" /> Voltar para Meus Pedidos
+            <div v-else-if="!order" class="state-container">
+                <div class="error-circle">
+                    <font-awesome-icon :icon="faBan" />
+                </div>
+                <h2>Pedido não encontrado</h2>
+                <p>Verifique se o ID está correto ou tente novamente.</p>
+                <button class="btn-back" @click="goBackToOrders">
+                    <font-awesome-icon :icon="faChevronLeft" /> Voltar
                 </button>
-                <h1 class="main-title">
-                    Detalhes do Pedido <span class="order-id">#{{ order.id }}</span>
-                </h1>
             </div>
 
-            <div class="status-tracker">
-                <div v-for="(step, index) in statusSteps" :key="step" class="step" :class="{
-                    'completed': (index + 1) < currentStatusIndex,
-                    'active': (index + 1) === currentStatusIndex
-                }">
-                    <div class="icon-wrapper">
-                        <font-awesome-icon v-if="index === 0" :icon="faClipboardCheck" />
-                        <font-awesome-icon v-if="index === 1" :icon="faBox" />
-                        <font-awesome-icon v-if="index === 2" :icon="faTruck" />
-                        <font-awesome-icon v-if="index === 3" :icon="faHouseUser" />
+            <div v-else class="order-container">
+
+                <header class="order-header">
+                    <div class="header-nav">
+                        <button class="btn-text-back" @click="goBackToOrders">
+                            <font-awesome-icon :icon="faChevronLeft" /> Meus Pedidos
+                        </button>
+                        <span class="meta-date">
+                            <font-awesome-icon :icon="faClock" /> Solicitado em {{ order.date }}
+                        </span>
                     </div>
-                    <span>{{ step }}</span>
-                </div>
-            </div>
+                    <div class="header-title-row">
+                        <h1>Pedido <span class="highlight">#{{ order.id }}</span></h1>
+                        <div class="status-badge" :class="order.status.toLowerCase()">
+                            {{ order.displayStatus }}
+                        </div>
+                    </div>
+                </header>
 
-            <div class="details-grid">
-                <div class="detail-card items-card">
-                    <h2 class="card-title">
-                        <font-awesome-icon :icon="faIceCream" />
-                        Produtos ({{ totalItems }} itens)
-                    </h2>
-                    <ul class="items-list">
-                        <li v-for="item in order.items" :key="item.id" class="order-item">
-                            <img :src="item.image" :alt="item.name" class="item-image" />
-                            <div class="item-info">
-                                <span class="item-name">{{ item.name }}</span>
-                                <span class="item-qty-price">{{ item.quantity }} x R$ {{
-                                    item.price.toFixed(2).replace('.', ',') }}</span>
+                <div v-if="order.status !== 'CANCELADO'" class="stepper-card">
+                    <div class="stepper-track">
+                        <div class="progress-bar-bg"></div>
+                        <div class="progress-bar-fill" :style="{ width: `${((currentStatusIndex - 1) / 4) * 100}%` }">
+                        </div>
+
+                        <div v-for="(step, index) in statusSteps" :key="step.label" class="step-item" :class="{
+                            'active': (index + 1) === currentStatusIndex,
+                            'completed': (index + 1) < currentStatusIndex
+                        }">
+                            <div class="step-icon-circle">
+                                <font-awesome-icon :icon="step.icon" />
                             </div>
-                            <strong class="item-subtotal">R$ {{ (item.price * item.quantity).toFixed(2).replace('.',
-                                ',') }}</strong>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="detail-card summary-card">
-                    <h2 class="card-title">Resumo do Pagamento</h2>
-                    <div class="summary-line">
-                        <span>Subtotal</span>
-                        <span>R$ {{ subtotal.toFixed(2).replace('.', ',') }}</span>
-                    </div>
-                    <div class="summary-line">
-                        <span>Taxa de Entrega</span>
-                        <span>R$ {{ order.summary.deliveryFee.toFixed(2).replace('.', ',') }}</span>
-                    </div>
-                    <div v-if="order.summary.discount > 0" class="summary-line discount">
-                        <span>Desconto</span>
-                        <span>- R$ {{ order.summary.discount.toFixed(2).replace('.', ',') }}</span>
-                    </div>
-                    <div class="summary-line grand-total">
-                        <strong>Total</strong>
-                        <strong>R$ {{ grandTotal.toFixed(2).replace('.', ',') }}</strong>
+                            <span class="step-label">{{ step.label }}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="detail-card">
-                    <h2 class="card-title"><font-awesome-icon :icon="faUser" /> Cliente</h2>
-                    <p>{{ order.customer.name }}</p>
+                <div v-else class="cancelled-banner">
+                    <div class="cancelled-icon"><font-awesome-icon :icon="faBan" /></div>
+                    <div class="cancelled-text">
+                        <h3>Pedido Cancelado</h3>
+                        <p>Este pedido foi cancelado e a entrega não será realizada.</p>
+                    </div>
                 </div>
-                <div class="detail-card">
-                    <h2 class="card-title"><font-awesome-icon :icon="faMapMarkerAlt" /> Entrega</h2>
-                    <p><strong>Método:</strong> {{ order.delivery.method === 'delivery' ? 'Entrega em domicílio' :
-                        'Retirada' }}</p>
-                    <p><strong>Endereço:</strong> {{ order.delivery.address }}</p>
-                    <p><strong>Agendamento:</strong> {{ order.date }} às {{ order.time }}</p>
+
+                <div class="order-grid">
+
+                    <section class="products-section">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="header-icon ice-cream"><font-awesome-icon :icon="faIceCream" /></div>
+                                <h2>Itens do Pedido</h2>
+                                <span class="badge-count">{{ order.items.length }}</span>
+                            </div>
+
+                            <div class="products-list">
+                                <div v-for="item in order.items" :key="item.id" class="product-row">
+                                    <div class="product-thumb">
+                                        <img :src="item.image" :alt="item.name" />
+                                    </div>
+                                    <div class="product-info">
+                                        <h3>{{ item.name }}</h3>
+                                        <div class="product-meta">
+                                            <span class="qty">{{ item.quantity }}x</span>
+                                            <span class="unit-price">{{ formatCurrency(item.price) }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="product-total">
+                                        {{ formatCurrency(item.price * item.quantity) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card info-card">
+                            <div class="card-header compact">
+                                <div class="header-icon loc"><font-awesome-icon :icon="faLocationDot" /></div>
+                                <h2>Entrega</h2>
+                            </div>
+                            <div class="info-body">
+                                <p class="address-text">{{ order.delivery.address }}</p>
+                                <div class="delivery-badge-row">
+                                    <span class="method-badge">
+                                        {{ order.delivery.method === 'delivery' ? 'Delivery' : 'Retirada' }}
+                                    </span>
+                                </div>
+                                <div v-if="order.delivery.method === 'delivery'" class="schedule-box">
+                                    <div><strong>Agendado:</strong> {{ order.date }}</div>
+                                    <div><strong>Horário:</strong> Aprox. {{ order.time }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mini-grid">
+                            <div class="card mini-card" :style="{ '--accent': paymentDetails.color }">
+                                <span class="mini-label">Pagamento</span>
+                                <font-awesome-icon :icon="paymentDetails.icon" class="mini-icon" />
+                                <span class="mini-value">{{ paymentDetails.label }}</span>
+                            </div>
+
+                            <div class="card mini-card cart-card">
+                                <span class="mini-label">Carrinho</span>
+                                <div class="cart-img-wrap">
+                                    <img :src="order.cart.image" :alt="order.cart.name">
+                                </div>
+                                <span class="mini-value">{{ order.cart.name }}</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="sidebar-section">
+                        <div class="sticky-wrapper">
+
+                            <div class="card summary-card">
+                                <div class="card-header">
+                                    <div class="header-icon receipt"><font-awesome-icon :icon="faReceipt" /></div>
+                                    <h2>Resumo</h2>
+                                </div>
+                                <div class="summary-body">
+                                    <div class="summary-row">
+                                        <span>Subtotal</span>
+                                        <span class="val">{{ formatCurrency(subtotal) }}</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Taxa de Entrega</span>
+                                        <span class="val">{{ order.summary.deliveryFee === 0 ? 'Grátis' :
+                                            formatCurrency(order.summary.deliveryFee) }}</span>
+                                    </div>
+                                    <div v-if="order.summary.discount > 0" class="summary-row discount">
+                                        <span>Desconto</span>
+                                        <span class="val">- {{ formatCurrency(order.summary.discount) }}</span>
+                                    </div>
+                                    <div class="divider"></div>
+                                    <div class="summary-row total">
+                                        <span>Total</span>
+                                        <span class="val">{{ formatCurrency(grandTotal) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header compact">
+                                    <div class="header-icon user"><font-awesome-icon :icon="faUserCircle" /></div>
+                                    <h2>Cliente</h2>
+                                </div>
+                                <div class="info-body">
+                                    <div class="client-name">{{ order.customer.name }}</div>
+                                    <div class="info-item">
+                                        <font-awesome-icon :icon="faEnvelope" /> {{ order.customer.email }}
+                                    </div>
+                                    <div class="info-item">
+                                        <font-awesome-icon :icon="faPhone" /> {{ order.customer.phone }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
                 </div>
-                <div class="detail-card">
-                    <h2 class="card-title"><font-awesome-icon :icon="paymentDetails.icon" /> Pagamento</h2>
-                    <p>Pagamento via <strong>{{ paymentDetails.label }}</strong></p>
-                </div>
+
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-@keyframes slideInUp {
+/* --- Configurações Globais --- */
+.page-background {
+    min-height: 100vh;
+    background-color: #f8fafc;
+    /* Fundo cinza bem claro */
+    font-family: 'Fredoka', 'Segoe UI', sans-serif;
+    padding: 2rem 1rem;
+    color: #334155;
+}
+
+.content-wrapper {
+    max-width: 1140px;
+    margin: 0 auto;
+}
+
+/* Animações */
+@keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(15px);
     }
 
     to {
@@ -247,316 +459,640 @@ onMounted(() => {
     }
 }
 
-@keyframes pulse {
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4);
+    }
 
-    0%,
+    70% {
+        box-shadow: 0 0 0 8px rgba(236, 72, 153, 0);
+    }
+
     100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(218, 96, 118, 0.4);
-    }
-
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(218, 96, 118, 0);
+        box-shadow: 0 0 0 0 rgba(236, 72, 153, 0);
     }
 }
 
-.order-detail-view {
-    min-height: 100vh;
-    background: linear-gradient(135deg, hsl(345, 80%, 96%), hsl(206, 80%, 96%));
-    padding: 2rem;
-    font-family: 'Fredoka', sans-serif;
-}
-
-.loading-container {
+/* --- Loading & Error --- */
+.state-container {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    min-height: 80vh;
-    color: var(--c-text-dark);
-    gap: 1.5rem;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    text-align: center;
+    color: #64748b;
 }
 
-.loading-icon {
+.loader-pulse {
     font-size: 3rem;
-    color: var(--c-rosa);
+    color: #ec4899;
 }
 
-.main-content {
-    animation: slideInUp 0.6s ease-out;
+.error-circle {
+    width: 80px;
+    height: 80px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: #ef4444;
+    margin-bottom: 0.5rem;
 }
 
-.header-container {
-    max-width: 1000px;
-    margin: 0 auto 2rem auto;
-}
-
-.back-btn {
-    font-family: 'Fredoka', sans-serif;
-    background: none;
+.btn-back {
+    margin-top: 1rem;
+    padding: 0.8rem 1.5rem;
+    background: #3b82f6;
+    color: white;
     border: none;
-    color: var(--c-azul);
+    border-radius: 50px;
     font-weight: 600;
-    font-size: 1rem;
     cursor: pointer;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 1rem;
-    transition: all 0.2s ease;
-    padding: 0.5rem 0;
+    transition: transform 0.2s;
 }
 
-.back-btn:hover {
-    color: var(--c-rosa);
-    transform: translateX(-3px);
+.btn-back:hover {
+    transform: translateY(-2px);
 }
 
-.main-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--c-text-dark);
+/* --- Header --- */
+.order-header {
+    margin-bottom: 2.5rem;
+    animation: fadeInUp 0.4s ease-out;
 }
 
-.order-id {
-    color: var(--c-rosa);
-}
-
-.status-tracker {
+.header-nav {
     display: flex;
     justify-content: space-between;
-    max-width: 1000px;
-    margin: 0 auto 3rem auto;
-    position: relative;
+    align-items: center;
+    margin-bottom: 1rem;
 }
 
-.status-tracker::before {
-    content: '';
+.btn-text-back {
+    font-family: var(--font-title);
+    background: none;
+    border: none;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    transition: color 0.2s;
+}
+
+.btn-text-back:hover {
+    color: #ec4899;
+}
+
+.meta-date {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.header-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-title-row h1 {
+    font-size: 2.2rem;
+    margin: 0;
+    color: #1e293b;
+    font-weight: 800;
+}
+
+.highlight {
+    color: #ec4899;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 0.5rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+.status-badge.pendente,
+.status-badge.aguardando_pagamento {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.status-badge.pago,
+.status-badge.confirmado {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.status-badge.em_preparacao {
+    background: #fefce8;
+    color: #a16207;
+}
+
+.status-badge.saiu_para_entrega {
+    background: #f3e8ff;
+    color: #7e22ce;
+}
+
+.status-badge.entregue {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.status-badge.cancelado {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+/* --- Stepper (Tracker) --- */
+.stepper-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    margin-bottom: 2.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    border: 1px solid #f1f5f9;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.stepper-track {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    max-width: 850px;
+    margin: 0 auto;
+}
+
+.progress-bar-bg {
     position: absolute;
-    top: 25px;
+    top: 22px;
     left: 0;
     right: 0;
     height: 4px;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    z-index: 1;
+    background: #e2e8f0;
+    border-radius: 4px;
+    z-index: 0;
 }
 
-.step {
+.progress-bar-fill {
+    position: absolute;
+    top: 22px;
+    left: 0;
+    height: 4px;
+    background: #ec4899;
+    border-radius: 4px;
+    z-index: 1;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 80px;
+    z-index: 2;
+    position: relative;
+    cursor: default;
+}
+
+.step-icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #f8fafc;
+    border: 4px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: #cbd5e1;
+    transition: all 0.4s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+}
+
+.step-label {
+    margin-top: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    transition: color 0.4s;
+    text-align: center;
+}
+
+.step-item.active .step-icon-circle {
+    background: #ec4899;
+    color: white;
+    transform: scale(1.1);
+    animation: pulseGlow 2s infinite;
+    border-color: #fdf2f8;
+}
+
+.step-item.active .step-label {
+    color: #be185d;
+}
+
+.step-item.completed .step-icon-circle {
+    background: #3b82f6;
+    color: white;
+    border-color: #eff6ff;
+}
+
+.step-item.completed .step-label {
+    color: #3b82f6;
+}
+
+.info-card {
+    margin-top: 2rem;
+}
+
+/* Cancelled Banner */
+.cancelled-banner {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    color: #991b1b;
+}
+
+.cancelled-icon {
+    font-size: 2.5rem;
+    color: #ef4444;
+}
+
+.cancelled-text h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+}
+
+.cancelled-text p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* --- Grid Layout Principal --- */
+.order-grid {
+    display: grid;
+    /* Coluna Esquerda Flexível | Coluna Direita Fixa (350px) */
+    grid-template-columns: 1fr 350px;
+    gap: 1.5rem;
+    align-items: start;
+    /* Importante para Sticky */
+}
+
+/* --- Cards Gerais --- */
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    border: 1px solid #f1f5f9;
+    animation: fadeInUp 0.6s ease-out;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f8fafc;
+}
+
+.card-header.compact {
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+}
+
+.header-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.header-icon.ice-cream {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.header-icon.receipt {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.header-icon.user {
+    background: #f3e8ff;
+    color: #7e22ce;
+}
+
+.header-icon.loc {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #334155;
+    flex-grow: 1;
+}
+
+.badge-count {
+    background: #f1f5f9;
+    color: #64748b;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+/* --- Products --- */
+.products-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.product-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem;
+    border-radius: 12px;
+    transition: background 0.2s;
+}
+
+.product-row:hover {
+    background: #f8fafc;
+}
+
+.product-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.product-info {
+    flex-grow: 1;
+}
+
+.product-info h3 {
+    margin: 0 0 0.2rem 0;
+    font-size: 1rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.product-meta {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.qty {
+    font-weight: 600;
+    color: #334155;
+    margin-right: 0.5rem;
+}
+
+.product-total {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 1.05rem;
+}
+
+/* --- Sidebar Sticky --- */
+.sidebar-section {
+    position: relative;
+}
+
+.sticky-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: sticky;
+    top: 1.5rem;
+    z-index: 10;
+}
+
+/* Summary */
+.summary-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    color: #64748b;
+}
+
+.summary-row .val {
+    color: #334155;
+    font-weight: 600;
+}
+
+.summary-row.discount {
+    color: #16a34a;
+}
+
+.summary-row.discount .val {
+    color: #16a34a;
+}
+
+.divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 0.5rem 0;
+}
+
+.summary-row.total {
+    font-size: 1.25rem;
+    color: #ec4899;
+    font-weight: 800;
+    align-items: center;
+}
+
+/* Info Cards */
+.info-body {
+    font-size: 0.95rem;
+    color: #475569;
+}
+
+.client-name {
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 0.4rem;
+    font-size: 1rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.address-text {
+    line-height: 1.5;
+    margin: 0 0 0.8rem 0;
+}
+
+.method-badge {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.schedule-box {
+    margin-top: 1rem;
+    background: #f0f9ff;
+    border: 1px dashed #bae6fd;
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #0369a1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.mini-grid {
+    display: grid;
+    margin-top: 2rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.mini-card {
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    color: #9e9e9e;
-    font-weight: 500;
-    z-index: 2;
-    position: relative;
-    width: 100px;
+    gap: 0.5rem;
+    border: 2px solid #f1f5f9;
+    box-shadow: none;
+    height: 100%;
+    justify-content: center;
 }
 
-.icon-wrapper {
-    width: 50px;
+.mini-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+}
+
+.mini-value {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #334155;
+}
+
+/* Pagamento Colorido */
+.mini-icon {
+    font-size: 1.8rem;
+    color: var(--accent);
+    margin: 0.2rem 0;
+}
+
+/* Carrinho Image */
+.cart-img-wrap {
     height: 50px;
-    border-radius: 50%;
-    border: 4px solid #fff;
-    background-color: #e0e0e0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-    margin-bottom: 0.5rem;
-    transition: all 0.4s ease;
 }
 
-.step.completed .icon-wrapper {
-    background-color: var(--c-azul);
+.cart-img-wrap img {
+    max-height: 100%;
+    max-width: 100%;
 }
 
-.step.active .icon-wrapper {
-    background-color: var(--c-rosa);
-    animation: pulse 2s infinite;
-}
-
-.step.completed,
-.step.active {
-    color: var(--c-text-dark);
-}
-
-.details-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 1.5rem;
-    max-width: 1000px;
-    margin: 0 auto;
-}
-
-.detail-card {
-    background-color: white;
-    border-radius: 20px;
-    padding: 1.5rem 2rem;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-    animation: slideInUp 0.5s ease-out backwards;
-    opacity: 0;
-    animation-fill-mode: forwards;
-}
-
-.detail-card:nth-child(1) {
-    animation-delay: 0.2s;
-}
-
-.detail-card:nth-child(2) {
-    animation-delay: 0.3s;
-}
-
-.detail-card:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-.detail-card:nth-child(4) {
-    animation-delay: 0.5s;
-}
-
-.detail-card:nth-child(5) {
-    animation-delay: 0.6s;
-}
-
-.items-card {
-    grid-column: 1 / 2;
-    grid-row: 1 / 3;
-}
-
-.card-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--c-azul);
-    margin: 0 0 1.5rem 0;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f0f0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.detail-card p {
-    margin: 0.5rem 0;
-    line-height: 1.6;
-    color: var(--c-text-dark);
-
-}
-
-.items-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.order-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.item-image {
-    width: 60px;
-    height: 60px;
-    object-fit: contain;
-    background-color: #f9f9f9;
-    border-radius: 10px;
-    border: 1px solid #f0f0f0;
-}
-
-.item-info {
-    flex-grow: 1;
-}
-
-.item-name {
-    display: block;
-    font-weight: 600;
-    color: var(--c-text-dark);
-}
-
-.item-qty-price {
-    color: var(--c-text-light);
-    font-size: 0.9rem;
-}
-
-.item-subtotal {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--c-text-dark);
-}
-
-.summary-line {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    font-weight: 500;
-    color: var(--c-text-dark);
-}
-
-.summary-line.discount span {
-    color: #10B981;
-}
-
-.grand-total {
-    border-top: 2px dashed #f0f0f0;
-    margin-top: 0.5rem;
-    padding-top: 1rem;
-    font-size: 1.2rem;
-    color: var(--c-rosa);
-}
-
-@media (max-width: 992px) {
-    .details-grid {
+/* --- Responsividade --- */
+@media (max-width: 900px) {
+    .order-grid {
         grid-template-columns: 1fr;
     }
 
-    .items-card {
-        grid-row: auto;
-    }
-}
-
-@media (max-width: 768px) {
-    .order-detail-view {
-        padding: 1.5rem;
+    .sticky-wrapper {
+        position: static;
     }
 
-    .main-title {
-        font-size: 2rem;
-        text-align: center;
+    .stepper-track {
+        overflow-x: scroll;
+        padding-bottom: 1rem;
+        justify-content: flex-start;
+        gap: 2rem;
     }
 
-    .header-container {
-        text-align: center;
+    .progress-bar-bg,
+    .progress-bar-fill {
+        display: none;
     }
 
-    .back-btn {
-        margin: 0 auto 1.5rem;
-    }
-
-    .status-tracker {
+    /* Remove barra conectora no mobile */
+    .header-title-row {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1.5rem;
+        gap: 0.5rem;
     }
 
-    .status-tracker::before {
-        left: 25px;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        height: 100%;
-    }
-
-    .step {
-        flex-direction: row;
-        gap: 1.5rem;
-        width: 100%;
+    .mini-grid {
+        grid-template-columns: 1fr 1fr;
     }
 }
 </style>

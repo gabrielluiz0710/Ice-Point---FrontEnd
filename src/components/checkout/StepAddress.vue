@@ -17,40 +17,22 @@ import {
     faClock,
     faTruck,
     faExclamationTriangle,
-    faLocationArrow,
-    faMapMarkedAlt,
-    faQuestionCircle,
-    faHome
+    faHome,
+    faQuestionCircle
 } from '@fortawesome/free-solid-svg-icons'
-import type { InferType } from 'yup'
 import { useUserStore } from '@/stores/user'
 import CartSelectionStep from './CartSelectionStep.vue'
 
 const checkoutStore = useCheckoutStore()
 const userStore = useUserStore()
 const emit = defineEmits(['completed'])
+
 const isCepLoading = ref(false)
-const isAddressSectionFilled = ref(false)
 const cepInputRef = ref<HTMLInputElement | null>(null);
-const isDeliveryCepLoading = ref(false);
-const additionalAddressFormRef = ref<HTMLElement | null>(null);
 const selectedAddressId = ref<number | null>(null);
 
-const setCepInputRef = (el: Element | ComponentPublicInstance | null) => {
-    if (el instanceof HTMLInputElement) {
-        cepInputRef.value = el;
-    }
-}
-
 const showCepNotFoundErrorModal = ref(false);
-const lastInvalidCepField = ref<'main' | 'delivery' | null>(null);
 const showCityErrorModal = ref(false);
-const isInvalidCity = ref(false);
-const showInvalidMainAddressModal = ref(false);
-type FormValues = InferType<typeof schema>;
-type FormKeys = keyof FormValues;
-const isDeliveryInvalidCity = ref(false);
-const deliveryChoiceRef = ref<HTMLElement | null>(null);
 
 const minDeliveryDate = computed(() => {
     const tomorrow = new Date();
@@ -80,40 +62,40 @@ const savedAddresses = computed(() => {
 });
 
 const schema = yup.object({
-    cep: yup.string().required('O CEP é obrigatório').matches(/^(\d{5}-\d{3})$/, 'Formato de CEP inválido'),
-    street: yup.string().required('O endereço é obrigatório'),
-    number: yup.string().required('O número é obrigatório'),
-    complement: yup.string(),
-    neighborhood: yup.string().required('O bairro é obrigatório'),
-    city: yup.string().required('A cidade é obrigatória'),
-    state: yup.string().required('O estado é obrigatório'),
     deliveryMethod: yup.string().required('Escolha um método'),
-    useSameAddressForDelivery: yup.boolean().when('deliveryMethod', {
+
+    cep: yup.string().when('deliveryMethod', {
         is: 'delivery',
-        then: schema => schema.required('Por favor, escolha onde entregar.'),
-        otherwise: schema => schema.notRequired(),
-    }),
-    delivery_cep: yup.string().when('useSameAddressForDelivery', {
-        is: false,
         then: schema => schema.required('O CEP é obrigatório').matches(/^(\d{5}-\d{3})$/, 'Formato de CEP inválido'),
-        otherwise: schema => schema.notRequired(),
+        otherwise: schema => schema.notRequired()
     }),
-    delivery_street: yup.string().when('useSameAddressForDelivery', {
-        is: false, then: schema => schema.required('O endereço é obrigatório'), otherwise: schema => schema.notRequired()
+    street: yup.string().when('deliveryMethod', {
+        is: 'delivery',
+        then: schema => schema.required('O endereço é obrigatório'),
+        otherwise: schema => schema.notRequired()
     }),
-    delivery_number: yup.string().when('useSameAddressForDelivery', {
-        is: false, then: schema => schema.required('O número é obrigatório'), otherwise: schema => schema.notRequired()
+    number: yup.string().when('deliveryMethod', {
+        is: 'delivery',
+        then: schema => schema.required('O número é obrigatório'),
+        otherwise: schema => schema.notRequired()
     }),
-    delivery_complement: yup.string().notRequired(),
-    delivery_neighborhood: yup.string().when('useSameAddressForDelivery', {
-        is: false, then: schema => schema.required('O bairro é obrigatório'), otherwise: schema => schema.notRequired()
+    complement: yup.string(),
+    neighborhood: yup.string().when('deliveryMethod', {
+        is: 'delivery',
+        then: schema => schema.required('O bairro é obrigatório'),
+        otherwise: schema => schema.notRequired()
     }),
-    delivery_city: yup.string().when('useSameAddressForDelivery', {
-        is: false, then: schema => schema.required('A cidade é obrigatória').oneOf(['Uberaba'], 'No momento, entregamos apenas em Uberaba.'), otherwise: schema => schema.notRequired()
+    city: yup.string().when('deliveryMethod', {
+        is: 'delivery',
+        then: schema => schema.required('A cidade é obrigatória').oneOf(['Uberaba'], 'No momento, entregamos apenas em Uberaba.'),
+        otherwise: schema => schema.notRequired()
     }),
-    delivery_state: yup.string().when('useSameAddressForDelivery', {
-        is: false, then: schema => schema.required('O estado é obrigatório'), otherwise: schema => schema.notRequired()
+    state: yup.string().when('deliveryMethod', {
+        is: 'delivery',
+        then: schema => schema.required('O estado é obrigatório'),
+        otherwise: schema => schema.notRequired()
     }),
+
     scheduleDate: yup.date()
         .transform((value, originalValue) => {
             return originalValue ? new Date(originalValue) : null;
@@ -125,6 +107,7 @@ const schema = yup.object({
 });
 
 const initialValues = {
+    deliveryMethod: checkoutStore.deliveryMethod || null,
     cep: checkoutStore.address.cep,
     street: checkoutStore.address.street,
     number: checkoutStore.address.number,
@@ -132,27 +115,27 @@ const initialValues = {
     neighborhood: checkoutStore.address.neighborhood,
     city: checkoutStore.address.city,
     state: checkoutStore.address.state,
-
-    delivery_cep: checkoutStore.deliveryAddress.cep,
-    delivery_street: checkoutStore.deliveryAddress.street,
-    delivery_number: checkoutStore.deliveryAddress.number,
-    delivery_complement: checkoutStore.deliveryAddress.complement,
-    delivery_neighborhood: checkoutStore.deliveryAddress.neighborhood,
-    delivery_city: checkoutStore.deliveryAddress.city,
-    delivery_state: checkoutStore.deliveryAddress.state,
-
-    deliveryMethod: checkoutStore.deliveryMethod,
     scheduleDate: checkoutStore.schedule.date,
     scheduleTime: checkoutStore.schedule.time,
-    useSameAddressForDelivery:
-        (checkoutStore.useSameAddressForDelivery === true || checkoutStore.useSameAddressForDelivery === false)
-            ? checkoutStore.useSameAddressForDelivery
-            : null,
 };
+
+const { setFieldValue, values, handleSubmit, meta } = useForm({
+    validationSchema: schema,
+    initialValues: initialValues,
+});
+
+
+function selectDeliveryMethod(method: 'delivery' | 'pickup') {
+    setFieldValue('deliveryMethod', method);
+    checkoutStore.deliveryMethod = method;
+
+    if (method === 'pickup') {
+        selectedAddressId.value = null;
+    }
+}
 
 function selectSavedAddress(addr: any) {
     selectedAddressId.value = addr.id;
-
     setFieldValue('cep', applyMask(addr.zip, '#####-###'));
     setFieldValue('street', addr.street);
     setFieldValue('number', addr.number);
@@ -160,233 +143,48 @@ function selectSavedAddress(addr: any) {
     setFieldValue('neighborhood', addr.neighborhood);
     setFieldValue('city', addr.city);
     setFieldValue('state', addr.state);
-
-    isAddressSectionFilled.value = true;
-    showCityErrorModal.value = false;
-    showInvalidMainAddressModal.value = false;
 }
 
-function clearSelection() {
-    selectedAddressId.value = null;
-    setFieldValue('cep', '');
-    setFieldValue('street', '');
-    setFieldValue('number', '');
-    setFieldValue('complement', '');
-    setFieldValue('neighborhood', '');
-    setFieldValue('city', '');
-    setFieldValue('state', '');
-
-    isAddressSectionFilled.value = false;
-    setTimeout(() => cepInputRef.value?.focus(), 100);
-}
-
-const { setFieldValue, values, setFieldError, handleSubmit, meta } = useForm({
-    validationSchema: schema,
-    initialValues: initialValues,
-});
-
-watch(showInvalidMainAddressModal, async (isShowing, wasShowing) => {
-    if (!isShowing && wasShowing) {
-        await nextTick();
-        cepInputRef.value?.focus();
-    }
-});
-
-watch(showCityErrorModal, async (isShowing, wasShowing) => {
-    if (!isShowing && wasShowing) {
-        await nextTick();
-        const deliveryCepInput = document.getElementById('delivery_cep');
-        if (deliveryCepInput) {
-            deliveryCepInput.focus();
-        }
-    }
-});
-
-watch(() => values.useSameAddressForDelivery, (isSelected) => {
-    if (isSelected === true) {
-        deliveryAddressFormFields.value.forEach(field => {
-            setFieldValue(field.name as FormKeys, undefined);
-            setFieldError(field.name as FormKeys, undefined);
-        });
-    }
-});
-
-watch(showCepNotFoundErrorModal, async (isShowing, wasShowing) => {
-    if (!isShowing && wasShowing) {
-        await nextTick();
-
-        if (lastInvalidCepField.value === 'main') {
-            cepInputRef.value?.focus();
-        } else if (lastInvalidCepField.value === 'delivery') {
-            const deliveryCepInput = document.getElementById('delivery_cep');
-            deliveryCepInput?.focus();
-        }
-
-        lastInvalidCepField.value = null;
-    }
-});
-
-function selectDeliveryMethod(method: 'delivery' | 'pickup', setFieldValueFn: Function) {
-    setFieldValueFn('deliveryMethod', method);
-    checkoutStore.deliveryMethod = method;
-
-    if (method === 'pickup') {
-        setFieldValueFn('useSameAddressForDelivery', null);
-        setFieldError('useSameAddressForDelivery', undefined);
-
-        deliveryAddressFormFields.value.forEach(field => {
-            setFieldValueFn(field.name as FormKeys, undefined);
-            setFieldError(field.name as FormKeys, undefined);
-        });
-    } else if (method === 'delivery') {
-        setFieldValueFn('useSameAddressForDelivery', null);
-        setFieldError('useSameAddressForDelivery', undefined);
-    }
-}
-
-
-
-function handleUseSameAddress(city: string, onChange: (value: boolean) => void) {
-    if (city === 'Uberaba') {
-        onChange(true);
-    } else {
-        showInvalidMainAddressModal.value = true;
-    }
-}
-
-onMounted(() => {
-    if (savedAddresses.value.length > 0 && !checkoutStore.address.cep) {
-        const principal = savedAddresses.value.find(a => a.principal);
-        if (principal) {
-            selectSavedAddress(principal);
-        }
-    } else {
-        cepInputRef.value?.focus();
-    }
-
-    if (checkoutStore.address.cep && checkoutStore.address.street) {
-        isAddressSectionFilled.value = true;
-    }
-    if (initialValues.deliveryMethod) {
-        checkoutStore.deliveryMethod = initialValues.deliveryMethod;
-    }
-});
-
-const addressFormFields = [
-    { name: 'cep', label: 'CEP', type: 'tel', mask: '#####-###', placeholder: '00000-000', icon: faMapPin },
-    { name: 'street', label: 'Endereço', type: 'text', placeholder: 'Nome da Rua', icon: faRoad, readonly: true },
-    { name: 'number', label: 'Número', type: 'text', placeholder: 'Digite o número', icon: faHashtag },
-    { name: 'complement', label: 'Complemento (Opcional)', type: 'text', placeholder: 'Apto, bloco, etc.', icon: faBuilding },
-    { name: 'neighborhood', label: 'Bairro', type: 'text', placeholder: 'Nome do Bairro', icon: faCity, readonly: true },
-    { name: 'city', label: 'Cidade', type: 'text', placeholder: 'Nome da Cidade', icon: faCity, readonly: true },
-    { name: 'state', label: 'Estado', type: 'text', placeholder: 'Nome do Estado', icon: faCity, readonly: true },
-]
-
-const deliveryAddressFormFields = computed(() =>
-    addressFormFields.map(field => ({
-        ...field,
-        name: `delivery_${field.name}`,
-        label: field.label.replace(' (Opcional)', ''),
-    }))
-);
-
-async function handleCepLookup(cepValue: string, setFieldValueFn: Function, isDelivery: boolean = false) {
-    console.log(`[handleCepLookup] 🚀 Iniciando busca...`, { cepValue, isDelivery });
-
+async function handleCepLookup(cepValue: string) {
     const cep = cepValue?.replace(/\D/g, '') || '';
-    console.log(`[handleCepLookup] CEP limpo: "${cep}"`);
 
-    if (cep.length !== 8) {
-        console.log(`[handleCepLookup] ⚠️ Tamanho do CEP inválido. Abortando.`);
-        return;
-    }
+    if (cep.length !== 8) return;
 
-    if (!isDelivery) {
-        selectedAddressId.value = null;
-    }
+    selectedAddressId.value = null;
+    isCepLoading.value = true;
 
-    const prefix = isDelivery ? 'delivery_' : '';
-    const loadingRef = isDelivery ? isDeliveryCepLoading : isCepLoading;
-    console.log(`[handleCepLookup] Contexto definido como '${isDelivery ? 'Entrega' : 'Principal'}'. Prefixo: "${prefix}"`);
-
-    loadingRef.value = true;
-    console.log(`[handleCepLookup] 🔄 Estado de carregamento ativado.`);
-
-    if (isDelivery) {
-        isDeliveryInvalidCity.value = false;
-    }
-
-    if (!isDelivery) {
-        isAddressSectionFilled.value = false;
-    }
-
-    const clearFields = () => {
-        const fieldsToClear = [`${prefix}street`, `${prefix}neighborhood`, `${prefix}city`, `${prefix}state`];
-        console.log(`[handleCepLookup] 🧹 Limpando campos:`, fieldsToClear);
-        fieldsToClear.forEach(field => setFieldValueFn(field as FormKeys, ''));
-        if (!isDelivery) isAddressSectionFilled.value = false;
-    };
+    ['street', 'neighborhood', 'city', 'state'].forEach(field => setFieldValue(field as any, ''));
 
     try {
-        const apiUrl = `https://viacep.com.br/ws/${cep}/json/`;
-        console.log(`[handleCepLookup] 📡 Fazendo requisição para: ${apiUrl}`);
-        const response = await fetch(apiUrl);
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
         const data = await response.json();
-        console.log(`[handleCepLookup] ✅ Resposta recebida da API:`, data);
 
         if (data.erro) {
-            console.warn(`[handleCepLookup] ❌ API retornou 'erro: true'. CEP não encontrado.`);
-            lastInvalidCepField.value = isDelivery ? 'delivery' : 'main';
             showCepNotFoundErrorModal.value = true;
-            clearFields();
             return;
         }
 
-        if (isDelivery && data.localidade !== 'Uberaba') {
-            console.warn(`[handleCepLookup] ❌ Cidade inválida para entrega. Recebido: "${data.localidade}"`);
+        if (data.localidade !== 'Uberaba') {
             showCityErrorModal.value = true;
-            isDeliveryInvalidCity.value = true;
-            clearFields();
-            setFieldValueFn('delivery_cep' as FormKeys, '');
-        } else {
-            console.log(`[handleCepLookup] ✅ Sucesso! Preenchendo campos do formulário.`);
-
-            console.log(`   ➡️ ${prefix}street:`, data.logradouro);
-            setFieldValueFn(`${prefix}street` as FormKeys, data.logradouro);
-
-            console.log(`   ➡️ ${prefix}neighborhood:`, data.bairro);
-            setFieldValueFn(`${prefix}neighborhood` as FormKeys, data.bairro);
-
-            console.log(`   ➡️ ${prefix}city:`, data.localidade);
-            setFieldValueFn(`${prefix}city` as FormKeys, data.localidade);
-
-            console.log(`   ➡️ ${prefix}state:`, data.uf);
-            setFieldValueFn(`${prefix}state` as FormKeys, data.uf);
-
-            if (!isDelivery) {
-                isAddressSectionFilled.value = true;
-                console.log(`[handleCepLookup] Seção de endereço principal marcada como preenchida.`);
-            }
-
-            await nextTick();
-            const numberInput = document.getElementById(`${prefix}number`);
-            console.log(`[handleCepLookup] 🖱️ Tentando focar no campo de número: #${prefix}number`);
-            if (numberInput) {
-                numberInput.focus();
-                console.log(`[handleCepLookup] Foco aplicado com sucesso.`);
-            } else {
-                console.warn(`[handleCepLookup] Campo de número não encontrado no DOM.`);
-            }
+            setFieldValue('cep', '');
+            return;
         }
 
+        setFieldValue('street', data.logradouro);
+        setFieldValue('neighborhood', data.bairro);
+        setFieldValue('city', data.localidade);
+        setFieldValue('state', data.uf);
+
+        await nextTick();
+        document.getElementById('number')?.focus();
+
     } catch (error) {
-        console.error('[handleCepLookup] 💥 ERRO CRÍTICO na busca do CEP:', error);
-        clearFields();
+        console.error(error);
     } finally {
-        loadingRef.value = false;
-        console.log(`[handleCepLookup] 🏁 Fim da execução. Estado de carregamento desativado.`);
+        isCepLoading.value = false;
     }
 }
+
 function applyMask(value: string, mask: string): string {
     if (!value) return '';
     const cleanValue = value.replace(/\D/g, '');
@@ -405,35 +203,6 @@ function applyMask(value: string, mask: string): string {
     return maskedValue;
 }
 
-watch(values, (newValues) => {
-    if (savedAddresses.value.length) {
-        const match = savedAddresses.value.find(addr => {
-            const addrZipMasked = applyMask(addr.zip || '', '#####-###');
-            return (
-                addrZipMasked === newValues.cep &&
-                addr.street === newValues.street &&
-                addr.number === newValues.number &&
-                (addr.complement || '') === (newValues.complement || '') &&
-                addr.neighborhood === newValues.neighborhood &&
-                addr.city === newValues.city &&
-                addr.state === newValues.state
-            );
-        });
-        selectedAddressId.value = match ? (match.id ?? null) : null;
-    }
-
-    if (newValues.deliveryMethod === 'delivery' && newValues.useSameAddressForDelivery) {
-        if (newValues.city && newValues.city !== 'Uberaba') {
-
-            if (!showInvalidMainAddressModal.value) {
-                showInvalidMainAddressModal.value = true;
-            }
-
-            setFieldValue('useSameAddressForDelivery', false);
-        }
-    }
-}, { deep: true });
-
 function handleInput(event: Event, mask: string | undefined, fieldOnChange: (value: any) => void) {
     if (!mask) {
         fieldOnChange((event.target as HTMLInputElement).value);
@@ -444,29 +213,18 @@ function handleInput(event: Event, mask: string | undefined, fieldOnChange: (val
     fieldOnChange(maskedValue);
 }
 
-const onSubmit = handleSubmit((formValues) => {
-    checkoutStore.useSameAddressForDelivery = formValues.useSameAddressForDelivery ?? false;
-    if (formValues.deliveryMethod === 'delivery' && !formValues.useSameAddressForDelivery) {
-        checkoutStore.deliveryAddress = {
-            cep: formValues.delivery_cep,
-            street: formValues.delivery_street,
-            number: formValues.delivery_number,
-            complement: formValues.delivery_complement,
-            neighborhood: formValues.delivery_neighborhood,
-            city: formValues.delivery_city,
-            state: formValues.delivery_state,
-        };
-        checkoutStore.address = {
-            cep: formValues.cep,
-            street: formValues.street,
-            number: formValues.number,
-            complement: formValues.complement,
-            neighborhood: formValues.neighborhood,
-            city: formValues.city,
-            state: formValues.state,
-        };
+function normalize(value: string | undefined | null) {
+    return value ? String(value).replace(/\D/g, '').trim() : '';
+}
 
-    } else {
+function cleanString(str: string | undefined | null) {
+    return (str || '').toString().trim();
+}
+
+const onSubmit = handleSubmit((formValues) => {
+    checkoutStore.deliveryMethod = formValues.deliveryMethod as 'delivery' | 'pickup';
+
+    if (formValues.deliveryMethod === 'delivery') {
         checkoutStore.address = {
             cep: formValues.cep,
             street: formValues.street,
@@ -476,33 +234,95 @@ const onSubmit = handleSubmit((formValues) => {
             city: formValues.city,
             state: formValues.state,
         };
-        checkoutStore.deliveryAddress = {
-            cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: ''
-        };
+        checkoutStore.deliveryAddress = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' };
+        checkoutStore.useSameAddressForDelivery = true;
+    } else {
+        checkoutStore.address = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' };
     }
 
-    checkoutStore.deliveryMethod = formValues.deliveryMethod;
     checkoutStore.schedule = { date: formValues.scheduleDate, time: formValues.scheduleTime };
-
     emit('completed');
 });
 
-function getRef(field: { name: string }) {
-    if (field.name === 'cep') {
-        return setCepInputRef;
+const setCepInputRef = (el: Element | ComponentPublicInstance | null) => {
+    if (el instanceof HTMLInputElement) {
+        cepInputRef.value = el;
     }
-    return undefined;
 }
 
 const dateTimeKey = computed(() => {
     if (!values.scheduleDate || !values.scheduleTime) return undefined;
-
     return `${values.scheduleDate}-${values.scheduleTime}`;
 });
 
-watch([() => values.scheduleDate, () => values.scheduleTime], () => {
+watch([() => values.scheduleDate, () => values.scheduleTime], ([newDate, newTime]) => {
+    checkoutStore.schedule = {
+        date: newDate || '',
+        time: newTime || ''
+    };
     checkoutStore.selectedCarts = [];
-})
+});
+
+watch(values, (newValues) => {
+    if (savedAddresses.value.length > 0) {
+
+        const match = savedAddresses.value.find(addr => {
+            const formCep = normalize(newValues.cep);
+            const addrCep = normalize(addr.zip);
+
+            const isCepEqual = formCep === addrCep;
+            const isStreetEqual = cleanString(newValues.street) === cleanString(addr.street);
+            const isNumberEqual = cleanString(newValues.number) === cleanString(addr.number);
+            const isCompEqual = cleanString(newValues.complement) === cleanString(addr.complement);
+            const isNeighborhoodEqual = cleanString(newValues.neighborhood) === cleanString(addr.neighborhood);
+
+            return isCepEqual && isStreetEqual && isNumberEqual && isCompEqual && isNeighborhoodEqual;
+        });
+
+        selectedAddressId.value = match ? (match.id ?? null) : null;
+    }
+}, { deep: true });
+
+onMounted(async () => {
+    await nextTick();
+
+    const storeCep = normalize(checkoutStore.address.cep);
+    const storeNumber = normalize(checkoutStore.address.number);
+    const hasStoreData = storeCep && storeNumber;
+
+    if (savedAddresses.value.length > 0) {
+        if (hasStoreData) {
+            const match = savedAddresses.value.find(addr => {
+                const addrZip = normalize(addr.zip);
+                const addrNum = normalize(addr.number);
+                return addrZip === storeCep && addrNum === storeNumber;
+            });
+
+            if (match) {
+                selectedAddressId.value = match.id ?? null;
+            }
+        } else {
+            const principal = savedAddresses.value.find(a => a.principal);
+            if (principal) {
+                selectSavedAddress(principal);
+            }
+        }
+    } else {
+        if (!hasStoreData) {
+            cepInputRef.value?.focus();
+        }
+    }
+});
+
+const addressFormFields = [
+    { name: 'cep', label: 'CEP', type: 'tel', mask: '#####-###', placeholder: '00000-000', icon: faMapPin },
+    { name: 'street', label: 'Endereço', type: 'text', placeholder: 'Nome da Rua', icon: faRoad, readonly: true },
+    { name: 'number', label: 'Número', type: 'text', placeholder: 'Digite o número', icon: faHashtag },
+    { name: 'complement', label: 'Complemento (Opcional)', type: 'text', placeholder: 'Apto, bloco, etc.', icon: faBuilding },
+    { name: 'neighborhood', label: 'Bairro', type: 'text', placeholder: 'Nome do Bairro', icon: faCity, readonly: true },
+    { name: 'city', label: 'Cidade', type: 'text', placeholder: 'Nome da Cidade', icon: faCity, readonly: true },
+    { name: 'state', label: 'Estado', type: 'text', placeholder: 'Nome do Estado', icon: faCity, readonly: true },
+]
 </script>
 
 <template>
@@ -513,12 +333,12 @@ watch([() => values.scheduleDate, () => values.scheduleTime], () => {
                     <font-awesome-icon :icon="faQuestionCircle" class="modal-icon" />
                 </div>
                 <h3>CEP Não Encontrado</h3>
-                <p>O CEP digitado não foi encontrado em nossa base de dados. Por favor, verifique o número e tente
-                    novamente.</p>
+                <p>O CEP digitado não foi encontrado. Verifique e tente novamente.</p>
                 <button @click="showCepNotFoundErrorModal = false" class="modal-button">Entendi</button>
             </div>
         </div>
     </Transition>
+
     <Transition name="modal-fade">
         <div v-if="showCityErrorModal" class="modal-overlay" @click="showCityErrorModal = false">
             <div class="modal-content" @click.stop>
@@ -526,80 +346,26 @@ watch([() => values.scheduleDate, () => values.scheduleTime], () => {
                     <font-awesome-icon :icon="faExclamationTriangle" class="modal-icon" />
                 </div>
                 <h3>Fora da Área de Entrega</h3>
-                <p>No momento, só conseguimos processar pedidos para a cidade de <strong>Uberaba</strong>. Por favor,
-                    insira um CEP válido.</p>
+                <p>No momento, entregamos apenas em <strong>Uberaba</strong>.</p>
                 <button @click="showCityErrorModal = false" class="modal-button">Entendi</button>
             </div>
         </div>
     </Transition>
 
-    <Transition name="modal-fade">
-        <div v-if="showInvalidMainAddressModal" class="modal-overlay" @click="showInvalidMainAddressModal = false">
-            <div class="modal-content" @click.stop>
-                <div class="modal-icon-wrapper">
-                    <font-awesome-icon :icon="faExclamationTriangle" class="modal-icon" />
-                </div>
-                <h3>Endereço Principal Fora da Área de Entrega</h3>
-                <p>No momento, só conseguimos processar pedidos para a cidade de <strong>Uberaba</strong>. Por favor,
-                    insira um CEP válido.</p>
-                <button @click="showInvalidMainAddressModal = false" class="modal-button">Entendi</button>
-            </div>
-        </div>
-    </Transition>
-
     <form @submit="onSubmit">
-        <div v-if="savedAddresses.length > 0" class="saved-addresses-section">
-            <h3 class="section-subtitle-endereco">Meus Endereços</h3>
-            <div class="address-cards-grid">
-                <div v-for="addr in savedAddresses" :key="addr.id" class="address-card"
-                    :class="{ active: selectedAddressId === addr.id }" @click="selectSavedAddress(addr)">
-                    <div class="card-header-addr">
-                        <font-awesome-icon :icon="faHome" />
-                        <span v-if="addr.principal" class="principal-tag">Principal</span>
-                    </div>
-                    <p class="addr-text"><strong>{{ addr.street }}, {{ addr.number }}</strong></p>
-                    <p class="addr-text">{{ addr.neighborhood }}</p>
-                    <p class="addr-text">{{ addr.city }} - {{ addr.state }}</p>
-                    <p class="addr-text cep">{{ addr.zip }}</p>
-                </div>
-            </div>
-        </div>
-        <fieldset :disabled="isCepLoading" class="form-fieldset">
-            <div class="form-grid">
-                <div v-for="(fieldData, index) in addressFormFields" :key="fieldData.name" class="form-field"
-                    :style="{ animationDelay: `${index * 80}ms` }">
-                    <label :for="fieldData.name">{{ fieldData.label }}</label>
-                    <div class="input-wrapper">
-                        <font-awesome-icon v-if="fieldData.name === 'cep' && isCepLoading" :icon="faSpinner"
-                            class="input-icon spin" />
-                        <font-awesome-icon v-else-if="fieldData.icon" :icon="fieldData.icon" class="input-icon" />
 
-                        <Field :name="fieldData.name" v-slot="{ field: veeField }">
-                            <input :ref="getRef(fieldData)" v-bind="veeField" :id="fieldData.name"
-                                :placeholder="fieldData.placeholder" :type="fieldData.type"
-                                :readonly="fieldData.readonly"
-                                @input="handleInput($event, fieldData.mask, veeField.onChange)"
-                                @blur="fieldData.name === 'cep' ? handleCepLookup(veeField.value, setFieldValue, false) : null"
-                                :disabled="(isCepLoading && fieldData.name !== 'cep')" />
-                        </Field>
-                    </div>
-                    <ErrorMessage :name="fieldData.name" class="error-message" />
-                </div>
-            </div>
-        </fieldset>
-
-        <div v-if="isAddressSectionFilled || values.cep" class="delivery-options-section">
-            <h3 class="section-subtitle">Como você quer receber seu pedido?</h3>
+        <div class="delivery-options-section">
+            <h3 class="section-subtitle-endereco">Como você quer receber seu pedido?</h3>
             <Field name="deliveryMethod" v-slot="{ value }">
                 <div class="choice-buttons">
                     <button type="button" :class="{ active: value === 'delivery' }"
-                        @click="selectDeliveryMethod('delivery', setFieldValue)">
+                        @click="selectDeliveryMethod('delivery')">
                         <font-awesome-icon :icon="faShippingFast" />
                         <span>Entregar no meu endereço</span>
                     </button>
 
                     <button type="button" :class="{ active: value === 'pickup' }"
-                        @click="selectDeliveryMethod('pickup', setFieldValue)">
+                        @click="selectDeliveryMethod('pickup')">
                         <font-awesome-icon :icon="faBoxOpen" />
                         <span>Retirar na sorveteria</span>
                     </button>
@@ -609,114 +375,106 @@ watch([() => values.scheduleDate, () => values.scheduleTime], () => {
         </div>
 
         <Transition name="fade-step">
-            <div v-if="values.deliveryMethod === 'delivery'" class="delivery-details-wrapper">
-                <div class="info-box delivery">
+            <div v-if="values.deliveryMethod === 'delivery'">
+
+                <div class="info-box delivery" style="margin-bottom: 1.5rem;">
                     <font-awesome-icon :icon="faTruck" />
                     <p>Uma taxa de entrega fixa de <strong>R$ 20,00</strong> será adicionada ao seu pedido.</p>
                 </div>
 
-                <div ref="deliveryChoiceRef" class="delivery-address-choice">
-                    <h3 class="section-subtitle--small">Onde entregar?</h3>
-                    <Field name="useSameAddressForDelivery" v-slot="{ field, value }">
-                        <div class="choice-buttons">
-                            <button type="button" :class="{ active: value === true }"
-                                @click="handleUseSameAddress(values.city, field.onChange)"> <font-awesome-icon
-                                    :icon="faLocationArrow" />
-                                <span>Usar o mesmo endereço</span>
-                            </button>
-
-                            <button type="button" :class="{ active: value === false }"
-                                @click="setFieldValue('useSameAddressForDelivery', false)">
-                                <font-awesome-icon :icon="faMapMarkedAlt" />
-                                <span>Usar outro endereço</span>
-                            </button>
+                <div v-if="savedAddresses.length > 0" class="saved-addresses-section">
+                    <h3 class="section-subtitle-endereco">Meus Endereços</h3>
+                    <div class="address-cards-grid">
+                        <div v-for="addr in savedAddresses" :key="addr.id" class="address-card"
+                            :class="{ active: selectedAddressId === addr.id }" @click="selectSavedAddress(addr)">
+                            <div class="card-header-addr">
+                                <font-awesome-icon :icon="faHome" />
+                                <span v-if="addr.principal" class="principal-tag">Principal</span>
+                            </div>
+                            <p class="addr-text"><strong>{{ addr.street }}, {{ addr.number }}</strong></p>
+                            <p class="addr-text">{{ addr.neighborhood }}</p>
+                            <p class="addr-text">{{ addr.city }} - {{ addr.state }}</p>
+                            <p class="addr-text cep">{{ addr.zip }}</p>
                         </div>
-                    </Field>
-                    <ErrorMessage name="useSameAddressForDelivery" class="error-message" />
+                    </div>
                 </div>
 
-                <Transition name="fade-step">
-                    <div ref="additionalAddressFormRef" v-if="values.useSameAddressForDelivery === false"
-                        class="additional-address-form">
-                        <fieldset :disabled="isDeliveryCepLoading" class="fieldset-additional-address">
-                            <div class="form-grid">
-                                <div v-for="(fieldData, index) in deliveryAddressFormFields" :key="fieldData.name"
-                                    class="form-field" :style="{ animationDelay: `${index * 80}ms` }">
-                                    <label :for="fieldData.name">{{ fieldData.label }}</label>
-                                    <div class="input-wrapper">
-                                        <font-awesome-icon
-                                            v-if="fieldData.name === 'delivery_cep' && isDeliveryCepLoading"
-                                            :icon="faSpinner" class="input-icon spin" />
-                                        <font-awesome-icon v-else-if="fieldData.icon" :icon="fieldData.icon"
-                                            class="input-icon" />
+                <h3 class="section-subtitle-endereco" v-if="savedAddresses.length > 0">Ou preencha um novo:</h3>
+                <fieldset :disabled="isCepLoading" class="form-fieldset">
+                    <div class="form-grid">
+                        <div v-for="(fieldData, index) in addressFormFields" :key="fieldData.name" class="form-field"
+                            :style="{ animationDelay: `${index * 80}ms` }">
+                            <label :for="fieldData.name">{{ fieldData.label }}</label>
+                            <div class="input-wrapper">
+                                <font-awesome-icon v-if="fieldData.name === 'cep' && isCepLoading" :icon="faSpinner"
+                                    class="input-icon spin" />
+                                <font-awesome-icon v-else-if="fieldData.icon" :icon="fieldData.icon"
+                                    class="input-icon" />
 
-                                        <Field :name="fieldData.name" v-slot="{ field: veeField }">
-                                            <input v-bind="veeField" :id="fieldData.name"
-                                                :placeholder="fieldData.placeholder" :type="fieldData.type"
-                                                :readonly="fieldData.readonly"
-                                                @input="handleInput($event, fieldData.mask, veeField.onChange)"
-                                                @blur="fieldData.name === 'delivery_cep' ? handleCepLookup(veeField.value, setFieldValue, true) : null"
-                                                @focus="(fieldData.name === 'delivery_cep') && (isDeliveryInvalidCity = false)"
-                                                :disabled="(isDeliveryCepLoading && fieldData.name !== 'delivery_cep') || (isDeliveryInvalidCity && fieldData.name !== 'delivery_cep')" />
-                                        </Field>
-                                    </div>
-                                    <ErrorMessage :name="fieldData.name" class="error-message" />
-                                </div>
+                                <Field :name="fieldData.name" v-slot="{ field: veeField }">
+                                    <input :ref="fieldData.name === 'cep' ? setCepInputRef : undefined"
+                                        v-bind="veeField" :id="fieldData.name" :placeholder="fieldData.placeholder"
+                                        :type="fieldData.type" :readonly="fieldData.readonly"
+                                        @input="handleInput($event, fieldData.mask, veeField.onChange)"
+                                        @blur="fieldData.name === 'cep' ? handleCepLookup(veeField.value) : null"
+                                        :disabled="(isCepLoading && fieldData.name !== 'cep')" />
+                                </Field>
                             </div>
-                        </fieldset>
+                            <ErrorMessage :name="fieldData.name" class="error-message" />
+                        </div>
                     </div>
-                </Transition>
+                </fieldset>
             </div>
         </Transition>
 
-        <div v-if="values.deliveryMethod" class="schedule-section">
-            <h3 class="section-subtitle">Quando?</h3>
-            <div class="form-grid">
-                <div class="form-field">
-                    <label for="scheduleDate">Data</label>
-                    <div class="input-wrapper">
-                        <font-awesome-icon :icon="faCalendar" class="input-icon" />
-                        <Field name="scheduleDate" type="date" :min="minDeliveryDate" :max="maxDeliveryDate"
-                            id="scheduleDate" />
+        <Transition name="fade-step">
+            <div v-if="values.deliveryMethod" class="schedule-section">
+                <h3 class="section-subtitle">Quando?</h3>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="scheduleDate">Data</label>
+                        <div class="input-wrapper">
+                            <font-awesome-icon :icon="faCalendar" class="input-icon" />
+                            <Field name="scheduleDate" type="date" :min="minDeliveryDate" :max="maxDeliveryDate"
+                                id="scheduleDate" />
+                        </div>
+                        <ErrorMessage name="scheduleDate" class="error-message" />
                     </div>
-                    <ErrorMessage name="scheduleDate" class="error-message" />
-                </div>
-                <div class="form-field">
-                    <label for="scheduleTime">Horário</label>
-                    <div class="input-wrapper">
-                        <font-awesome-icon :icon="faClock" class="input-icon" />
-                        <Field name="scheduleTime" as="select" id="scheduleTime">
-                            <option value="" disabled>Selecione um horário</option>
-                            <option v-for="time in availableTimes" :key="time" :value="time">{{ time }}</option>
-                        </Field>
+                    <div class="form-field">
+                        <label for="scheduleTime">Horário</label>
+                        <div class="input-wrapper">
+                            <font-awesome-icon :icon="faClock" class="input-icon" />
+                            <Field name="scheduleTime" as="select" id="scheduleTime">
+                                <option value="" disabled>Selecione um horário</option>
+                                <option v-for="time in availableTimes" :key="time" :value="time">{{ time }}</option>
+                            </Field>
+                        </div>
+                        <ErrorMessage name="scheduleTime" class="error-message" />
                     </div>
-                    <ErrorMessage name="scheduleTime" class="error-message" />
                 </div>
             </div>
-        </div>
+        </Transition>
 
         <Transition name="fade-step">
-            <div v-if="values.scheduleDate && values.scheduleTime" class="cart-step-wrapper">
+            <div v-if="values.scheduleDate && values.scheduleTime && values.deliveryMethod" class="cart-step-wrapper">
                 <h3 class="section-subtitle-endereco">Seleção de Carrinhos</h3>
-
                 <CartSelectionStep :key="dateTimeKey" @completed="() => { }" />
             </div>
         </Transition>
 
         <button type="submit" class="action-button"
-            :disabled="!meta.valid || isCepLoading || isDeliveryCepLoading || !checkoutStore.isCartSelectionComplete">
+            :disabled="!meta.valid || isCepLoading || !checkoutStore.isCartSelectionComplete">
 
             <span v-if="isCepLoading">Buscando CEP...</span>
-            <span v-else-if="!checkoutStore.isCartSelectionComplete && values.scheduleDate">
-                Selecione os Carrinhos
-            </span>
+            <span v-else-if="!values.deliveryMethod">Escolha o método de entrega</span>
+            <span v-else-if="!values.scheduleDate">Escolha a Data</span>
+            <span v-else-if="!checkoutStore.isCartSelectionComplete">Selecione os Carrinhos</span>
             <span v-else>Ir para Pagamento</span>
 
-            <font-awesome-icon v-if="!isCepLoading" :icon="faArrowRight" />
+            <font-awesome-icon v-if="!isCepLoading && values.deliveryMethod" :icon="faArrowRight" />
         </button>
-    </Form>
+    </form>
 </template>
-
 <style scoped>
 .cart-step-wrapper {
     margin-top: 2rem;
@@ -795,7 +553,7 @@ watch([() => values.scheduleDate, () => values.scheduleTime], () => {
 }
 
 .info-box.delivery {
-    margin-top: 0;
+    margin-top: 2rem;
 }
 
 .delivery-address-choice {
@@ -1149,10 +907,8 @@ watch([() => values.scheduleDate, () => values.scheduleTime], () => {
     font-weight: 500;
 }
 
-/* Cor específica para o aviso de entrega */
 .info-box.delivery {
     background-color: #f0f4ff;
-    /* Um azul neutro */
     color: #3b5bdb;
 }
 

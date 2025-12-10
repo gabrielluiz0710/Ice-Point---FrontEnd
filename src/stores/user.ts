@@ -121,7 +121,6 @@ export const useUserStore = defineStore('user', () => {
         }
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('[Auth] Token renovado com sucesso.')
-        // Opcional: Recarregar perfil se necessário, mas geralmente não precisa
       }
     })
 
@@ -307,13 +306,10 @@ export const useUserStore = defineStore('user', () => {
       const formData = new FormData()
       formData.append('file', file)
 
-      // Usando fetch para manter o padrão do seu store
       const response = await fetch(`${API_URL}/users/profile/avatar`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
-          // Nota: Não setar 'Content-Type': 'multipart/form-data' manualmente com fetch,
-          // o browser faz isso automaticamente incluindo o boundary correto.
         },
         body: formData,
       })
@@ -324,7 +320,6 @@ export const useUserStore = defineStore('user', () => {
 
       const result = await response.json()
 
-      // Atualiza o estado local imediatamente para refletir na tela
       if (user.value && result.avatarUrl) {
         user.value.avatarUrl = result.avatarUrl
       }

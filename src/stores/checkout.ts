@@ -1,7 +1,11 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { useCartStore } from './cart'
+import { useUserStore } from './user'
 import * as yup from 'yup'
+
+const CHECKOUT_STORAGE_KEY = 'icepoint_checkout_state'
+const API_URL = import.meta.env.VITE_API_URL
 
 interface PersonalData {
   cpf: string
@@ -59,6 +63,7 @@ const addressSchema = yup.object({
 
 export const useCheckoutStore = defineStore('checkout', () => {
   const cartStore = useCartStore()
+  const userStore = useUserStore()
 
   const personalData = ref({} as PersonalData)
   const address = ref({} as AddressData)
@@ -68,16 +73,17 @@ export const useCheckoutStore = defineStore('checkout', () => {
 
   const deliveryMethod = ref<'pickup' | 'delivery' | null>(null)
   const schedule = ref({ date: '', time: '' })
+  const paymentMode = ref<'online' | 'offline'>('offline')
   const paymentMethod = ref<'pix' | 'cash' | 'card'>('pix')
   const agreedToTerms = ref(false)
   const isCepLoading = ref(false)
   const selectedCarts = ref<SelectedCart[]>([])
   const showDeliveryFee = computed(() => deliveryMethod.value === 'delivery')
 
-  const showDiscount = computed(
-    () =>
-      (paymentMethod.value === 'pix' || paymentMethod.value === 'cash') && isAddressComplete.value,
-  )
+  const showDiscount = computed(() => {
+    if (paymentMode.value === 'online') return false
+    return paymentMethod.value === 'pix' || paymentMethod.value === 'cash'
+  })
 
   const isPersonalDataComplete = computed(() => personalDataSchema.isValidSync(personalData.value))
   const isAddressComplete = computed(
@@ -135,10 +141,170 @@ export const useCheckoutStore = defineStore('checkout', () => {
     useSameAddressForDelivery.value = true
     deliveryMethod.value = null
     schedule.value = { date: '', time: '' }
+    paymentMode.value = 'offline'
     paymentMethod.value = 'pix'
     agreedToTerms.value = false
     selectedCarts.value = []
+    localStorage.removeItem(CHECKOUT_STORAGE_KEY)
   }
+
+  function loadFromStorage() {
+    const stored = localStorage.getItem(CHECKOUT_STORAGE_KEY)
+    if (stored) {
+      try {
+        const data = JSON.parse(stored)
+        if (data.personalData) personalData.value = data.personalData
+        if (data.address) address.value = data.address
+        if (data.deliveryAddress) deliveryAddress.value = data.deliveryAddress
+        if (data.useSameAddressForDelivery !== undefined)
+          useSameAddressForDelivery.value = data.useSameAddressForDelivery
+        if (data.deliveryMethod) deliveryMethod.value = data.deliveryMethod
+        if (data.schedule) schedule.value = data.schedule
+        if (data.paymentMode) paymentMode.value = data.paymentMode
+        if (data.paymentMethod) paymentMethod.value = data.paymentMethod
+        if (data.selectedCarts) selectedCarts.value = data.selectedCarts
+      } catch (e) {
+        console.error('Erro ao carregar checkout do storage', e)
+        localStorage.removeItem(CHECKOUT_STORAGE_KEY)
+      }
+    }
+  }
+
+  function saveToStorage() {
+    const dataToSave = {
+      personalData: personalData.value,
+      address: address.value,
+      deliveryAddress: deliveryAddress.value,
+      useSameAddressForDelivery: useSameAddressForDelivery.value,
+      deliveryMethod: deliveryMethod.value,
+      schedule: schedule.value,
+      paymentMethod: paymentMethod.value,
+      selectedCarts: selectedCarts.value,
+    }
+    localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(dataToSave))
+  }
+
+  async function submitOrder() {
+    const token = cartStore.getAuthToken()
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    console.log('Itens selecionados:', selectedCarts.value)
+    const flatCartIds = selectedCarts.value.map((c) => c.cartIds || []).flat()
+    console.log('IDs planos para envio:', flatCartIds)
+
+    const backendPaymentMethod =
+      paymentMode.value === 'online' ? 'ONLINE' : paymentMethod.value.toUpperCase()
+
+    const payload = {
+      userId: userStore.user?.id || null,
+      items: cartStore.cartItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      })),
+      cartIds: flatCartIds,
+      dataAgendada: schedule.value.date,
+      horaAgendada: schedule.value.time,
+      metodoEntrega: deliveryMethod.value === 'delivery' ? 'DELIVERY' : 'PICKUP',
+      metodoPagamento: backendPaymentMethod,
+
+      personalData: {
+        fullName: personalData.value.fullName,
+        email: personalData.value.email,
+        cpf: personalData.value.cpf,
+        phone: personalData.value.phone,
+        birthDate: personalData.value.birthDate,
+      },
+
+      enderecoCep:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value.cep
+            : deliveryAddress.value.cep
+          : undefined,
+      enderecoLogradouro:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value.street
+            : deliveryAddress.value.street
+          : undefined,
+      enderecoNumero:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value.number
+            : deliveryAddress.value.number
+          : undefined,
+      enderecoComplemento:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value.complement
+            : deliveryAddress.value.complement
+          : undefined,
+      enderecoBairro:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value.neighborhood
+            : deliveryAddress.value.neighborhood
+          : undefined,
+      enderecoCidade:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value.city
+            : deliveryAddress.value.city
+          : undefined,
+      enderecoEstado:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value.state
+            : deliveryAddress.value.state
+          : undefined,
+
+      fullAddress:
+        deliveryMethod.value === 'delivery'
+          ? useSameAddressForDelivery.value
+            ? address.value
+            : deliveryAddress.value
+          : null,
+    }
+
+    const response = await fetch(`${API_URL}/cart/checkout`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      throw new Error('Falha ao salvar o pedido no banco de dados.')
+    }
+
+    const data = await response.json()
+    return data.orderId
+  }
+
+  loadFromStorage()
+
+  watch(
+    [
+      personalData,
+      address,
+      deliveryAddress,
+      useSameAddressForDelivery,
+      deliveryMethod,
+      schedule,
+      paymentMethod,
+      selectedCarts,
+    ],
+    () => {
+      saveToStorage()
+    },
+    { deep: true },
+  )
 
   return {
     personalData,
@@ -163,5 +329,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
     requiredCartsCount,
     isCartSelectionComplete,
     resetState,
+    paymentMode,
+    submitOrder,
+    loadFromStorage,
   }
 })

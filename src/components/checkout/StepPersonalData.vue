@@ -279,8 +279,9 @@ function onSubmit(values: any) {
                         <font-awesome-icon v-if="isLoggedIn && fieldData.name === 'email'" :icon="faLock"
                             class="status-icon locked" />
 
-                        <font-awesome-icon v-else-if="meta.valid && meta.dirty" :icon="faCheck"
-                            class="status-icon success" />
+                        <font-awesome-icon
+                            v-else-if="meta.valid && (meta.dirty || (veeField.value && String(veeField.value).length > 0))"
+                            :icon="faCheck" class="status-icon success" />
                     </Field>
                 </div>
                 <ErrorMessage :name="fieldData.name" class="error-message" />

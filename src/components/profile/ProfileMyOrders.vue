@@ -2,30 +2,132 @@
 import { ref, onMounted } from 'vue'
 import { faEye, faHistory } from '@fortawesome/free-solid-svg-icons'
 import { useRouter } from 'vue-router'
+import { supabase } from '@/service/supabase'
+
+interface BackendOrder {
+    id: number
+    nome: string
+    status: string
+    dataCriacao: string
+    dataAgendada: string
+    total: string
+}
+
+interface ApiResponse {
+    ativos: BackendOrder[]
+    historico: BackendOrder[]
+}
+
+interface FormattedOrder {
+    id: string
+    date: string
+    status: string
+    total: number
+}
 
 const isLoading = ref(true)
 const showHistory = ref(false)
 const router = useRouter()
+const API_URL = import.meta.env.VITE_API_URL
 
-const activeOrders = [
-    { id: '987654', date: '15/09/2025', status: 'Em preparação', total: 75.50 },
-    { id: '987123', date: '14/09/2025', status: 'Aguardando Pagamento', total: 42.00 },
-]
-const completedOrders = [
-    { id: '852369', date: '01/08/2025', status: 'Concluído', total: 112.30 },
-]
+const activeOrders = ref<FormattedOrder[]>([])
+const completedOrders = ref<FormattedOrder[]>([])
+
+const formatDate = (dateString: string) => {
+    if (!dateString) return '--/--/----'
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('pt-BR').format(date)
+}
+
+const fetchMyOrders = async () => {
+    isLoading.value = true
+    activeOrders.value = []
+    completedOrders.value = []
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session) {
+            router.push('/login')
+            return
+        }
+
+        const response = await fetch(`${API_URL}/encomendas`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            }
+        })
+
+        if (!response.ok) throw new Error('Erro ao buscar pedidos')
+
+        const data: ApiResponse = await response.json()
+
+        activeOrders.value = data.ativos.map(order => ({
+            id: String(order.id),
+            date: formatDate(order.dataCriacao),
+            status: formatStatusText(order.status),
+            total: Number(order.total)
+        }))
+
+        completedOrders.value = data.historico.map(order => ({
+            id: String(order.id),
+            date: formatDate(order.dataCriacao),
+            status: formatStatusText(order.status),
+            total: Number(order.total)
+        }))
+
+    } catch (error) {
+        console.error("Falha ao carregar pedidos:", error)
+    } finally {
+        isLoading.value = false
+    }
+}
 
 onMounted(() => {
-    setTimeout(() => {
-        isLoading.value = false
-    }, 1500)
+    fetchMyOrders()
 })
 
+const formatStatusText = (status: string) => {
+    const map: Record<string, string> = {
+        'PENDENTE': 'Pendente',
+        'AGUARDANDO_PAGAMENTO': 'Aguardando Pagamento',
+        'PAGO': 'Pago',
+        'CONFIRMADO': 'Confirmado',
+        'EM_PREPARACAO': 'Em Preparação',
+        'SAIU_PARA_ENTREGA': 'Saiu para Entrega',
+        'ENTREGUE': 'Entregue',
+        'CANCELADO': 'Cancelado'
+    }
+    return map[status] || status
+}
+
 const getStatusClass = (status: string) => {
-    if (status === 'Em preparação') return 'status-preparing';
-    if (status === 'Aguardando Pagamento') return 'status-pending';
-    if (status === 'Concluído') return 'status-completed';
-    return '';
+    switch (status) {
+        case 'Aguardando Pagamento':
+            return 'status-warning';
+
+        case 'Pago':
+        case 'Confirmado':
+            return 'status-info';
+
+        case 'Em Preparação':
+            return 'status-working';
+
+        case 'Saiu para Entrega':
+            return 'status-shipping';
+
+        case 'Entregue':
+            return 'status-success';
+
+        case 'Cancelado':
+            return 'status-danger';
+
+        case 'Pendente':
+        default:
+            return 'status-neutral';
+    }
 }
 </script>
 
@@ -191,27 +293,55 @@ const getStatusClass = (status: string) => {
 }
 
 .status-badge {
-    padding: 0.3rem 0.8rem;
+    padding: 0.35rem 0.85rem;
     border-radius: 50px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     margin-top: 0.5rem;
     display: inline-block;
+    letter-spacing: 0.02em;
 }
 
-.status-preparing {
-    background-color: #ffc107;
-    color: #333;
+.status-neutral {
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #dee2e6;
 }
 
-.status-pending {
-    background-color: #fd7e14;
-    color: white;
+.status-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
 }
 
-.status-completed {
-    background-color: #28a745;
-    color: white;
+.status-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.status-working {
+    background-color: #fff9c4;
+    color: #f57f17;
+    border: 1px solid #fff176;
+}
+
+.status-shipping {
+    background-color: #e8daef;
+    color: #6c3483;
+    border: 1px solid #d2b4de;
+}
+
+.status-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 }
 
 .details-btn {

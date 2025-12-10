@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useCheckoutStore } from '@/stores/checkout'
+import { useCartStore } from '@/stores/cart'
 import { Field, Form, ErrorMessage } from 'vee-validate'
 import * as yup from 'yup'
 import {
@@ -8,40 +9,139 @@ import {
     faCreditCard,
     faReceipt,
     faShieldAlt,
-    faTags
+    faTags,
+    faGlobe,
+    faHandHoldingUsd,
+    faSpinner
 } from '@fortawesome/free-solid-svg-icons'
 import { faPix } from '@fortawesome/free-brands-svg-icons'
 import { useRouter } from 'vue-router'
 import { nextTick } from 'vue'
 
+const API_URL = import.meta.env.VITE_API_URL
 const checkoutStore = useCheckoutStore()
+const cartStore = useCartStore()
 const router = useRouter()
+const isProcessing = ref(false)
 
-const paymentOptions = [
-    { value: 'pix', label: 'PIX', icon: faPix, hasDiscount: true },
-    { value: 'cash', label: 'Dinheiro', icon: faMoneyBillWave, hasDiscount: true },
-    { value: 'card', label: 'Cartão', icon: faCreditCard, hasDiscount: false },
+const offlineOptions = [
+    { value: 'pix', label: 'PIX (Na Entrega)', icon: faPix },
+    { value: 'cash', label: 'Dinheiro', icon: faMoneyBillWave },
+    { value: 'card', label: 'Cartão (Maquininha)', icon: faCreditCard },
 ] as const;
 
 const schema = yup.object({
-    paymentMethod: yup.string().required('Escolha uma forma de pagamento.'),
+    paymentMode: yup.string().required('Escolha quando deseja pagar.'),
+    paymentMethod: yup.string().when('paymentMode', {
+        is: 'offline',
+        then: schema => schema.required('Escolha uma forma de pagamento.'),
+        otherwise: schema => schema.notRequired()
+    }),
     agreedToTerms: yup.boolean().oneOf([true], 'Você deve aceitar os termos e condições.'),
 });
 
 const initialValues = {
+    paymentMode: checkoutStore.paymentMode,
     paymentMethod: checkoutStore.paymentMethod,
     agreedToTerms: checkoutStore.agreedToTerms,
 };
 
-function finalizeOrder(formValues: any) {
-    checkoutStore.paymentMethod = formValues.paymentMethod;
+async function finalizeOrder(formValues: any) {
+    checkoutStore.paymentMode = formValues.paymentMode;
     checkoutStore.agreedToTerms = formValues.agreedToTerms;
+    if (formValues.paymentMode === 'offline') {
+        checkoutStore.paymentMethod = formValues.paymentMethod;
+    }
 
-    console.log("PEDIDO FINALIZADO!", { ...checkoutStore });
+    try {
+        isProcessing.value = true
 
-    nextTick(() => {
-        router.push('/pedido-confirmado');
-    });
+        const orderId = await checkoutStore.submitOrder()
+
+        if (checkoutStore.paymentMode === 'online') {
+            await processOnlinePayment(orderId)
+        } else {
+            const receiptData = {
+                orderId: orderId,
+                personalData: { ...checkoutStore.personalData },
+                address: { ...checkoutStore.address },
+                deliveryAddress: { ...checkoutStore.deliveryAddress },
+                deliveryMethod: checkoutStore.deliveryMethod,
+                useSameAddress: checkoutStore.useSameAddressForDelivery,
+                schedule: { ...checkoutStore.schedule },
+                paymentMethod: checkoutStore.paymentMethod,
+                items: JSON.parse(JSON.stringify(cartStore.cartItems)),
+                selectedCarts: JSON.parse(JSON.stringify(checkoutStore.selectedCarts)),
+                financials: {
+                    total: checkoutStore.grandTotal,
+                    deliveryFee: checkoutStore.deliveryFee,
+                    discount: checkoutStore.discount,
+                    productsTotal: cartStore.totalCartPrice
+                }
+            };
+
+            sessionStorage.setItem('last_order_receipt', JSON.stringify(receiptData));
+
+            checkoutStore.resetState()
+            cartStore.emptyCart()
+
+            const orderHash = btoa(String(orderId));
+
+            router.push({
+                name: 'OrderConfirmation',
+                params: { hash: orderHash }
+            });
+        }
+    } catch (e: any) {
+        console.error(e)
+        alert('Erro ao finalizar: ' + (e.message || 'Erro desconhecido'))
+    } finally {
+        if (checkoutStore.paymentMode === 'offline') {
+            isProcessing.value = false
+        }
+    }
+}
+
+async function processOnlinePayment(orderId: number) {
+    isProcessing.value = true;
+    try {
+        const orderPayload = {
+            items: checkoutStore.selectedCarts.map(cart => ({
+                color: cart.color,
+                quantity: cart.quantity,
+                unitPrice: 250
+            })),
+            buyer: checkoutStore.personalData,
+            deliveryFee: checkoutStore.deliveryFee,
+            orderId: orderId.toString()
+        };
+
+        const response = await fetch(`${API_URL}/payment/create`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderPayload)
+        });
+
+        if (!response.ok) throw new Error('Falha ao criar pagamento');
+
+        const data = await response.json();
+
+        if (data.checkoutUrl) {
+            checkoutStore.resetState()
+            cartStore.emptyCart()
+            window.location.href = data.checkoutUrl;
+        } else {
+            alert('Erro: URL de pagamento não gerada.');
+            isProcessing.value = false;
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert('Ocorreu um erro ao conectar com o Mercado Pago.');
+        isProcessing.value = false;
+    }
 }
 </script>
 
@@ -50,32 +150,56 @@ function finalizeOrder(formValues: any) {
         v-slot="{ meta, setFieldValue, values }">
 
         <div class="payment-options-section">
-            <h3 class="section-subtitle">Qual a forma de pagamento?</h3>
-            <Field name="paymentMethod" v-slot="{ value }">
-                <div class="choice-buttons">
-                    <button v-for="option in paymentOptions" :key="option.value" type="button"
-                        :class="{ active: value === option.value }"
-                        @click="() => { setFieldValue('paymentMethod', option.value); checkoutStore.paymentMethod = option.value; }">
-                        <font-awesome-icon :icon="option.icon" />
-                        <span>{{ option.label }}</span>
-                    </button>
-                </div>
-            </Field>
-            <ErrorMessage name="paymentMethod" class="error-message" />
+            <h3 class="section-subtitle">Quando deseja pagar?</h3>
+            <div class="mode-buttons">
+                <button type="button" :class="{ active: values.paymentMode === 'online' }"
+                    @click="() => { setFieldValue('paymentMode', 'online'); checkoutStore.paymentMode = 'online'; }">
+                    <font-awesome-icon :icon="faGlobe" />
+                    <span>Pagar Agora (Online)</span>
+                </button>
+
+                <button type="button" :class="{ active: values.paymentMode === 'offline' }"
+                    @click="() => { setFieldValue('paymentMode', 'offline'); checkoutStore.paymentMode = 'offline'; }">
+                    <font-awesome-icon :icon="faHandHoldingUsd" />
+                    <span>Pagar na Entrega/Retirada</span>
+                </button>
+            </div>
+            <ErrorMessage name="paymentMode" class="error-message" />
         </div>
 
-        <Transition name="fade-step">
-            <div v-if="checkoutStore.discount > 0" class="info-box discount">
-                <font-awesome-icon :icon="faTags" />
-                <p>Oba! Você ganhou <strong>10% de desconto</strong> no valor dos produtos por escolher esta forma de
-                    pagamento!</p>
+        <Transition name="fade-step" mode="out-in">
+            <div v-if="values.paymentMode === 'offline'" class="offline-selection">
+                <h4 class="subsection-title">Como você vai pagar?</h4>
+                <Field name="paymentMethod" v-slot="{ value }">
+                    <div class="choice-buttons">
+                        <button v-for="option in offlineOptions" :key="option.value" type="button"
+                            :class="{ active: value === option.value }"
+                            @click="() => { setFieldValue('paymentMethod', option.value); checkoutStore.paymentMethod = option.value; }">
+                            <font-awesome-icon :icon="option.icon" />
+                            <span>{{ option.label }}</span>
+                        </button>
+                    </div>
+                </Field>
+                <ErrorMessage name="paymentMethod" class="error-message" />
+
+                <div v-if="checkoutStore.discount > 0" class="info-box discount">
+                    <font-awesome-icon :icon="faTags" />
+                    <p>Oba! <strong>10% de desconto</strong> aplicado por pagar em dinheiro ou PIX na entrega.</p>
+                </div>
+            </div>
+
+            <div v-else-if="values.paymentMode === 'online'" class="online-info">
+                <div class="mp-card">
+                    <img src="https://logospng.org/download/mercado-pago/logo-mercado-pago-icone-1024.png"
+                        alt="Mercado Pago" class="mp-logo" />
+                    <div class="mp-text">
+                        <h4>Ambiente Seguro Mercado Pago</h4>
+                        <p>Ao finalizar, você será redirecionado para pagar com <strong>PIX, Cartão de Crédito ou
+                                Débito</strong> com total segurança.</p>
+                    </div>
+                </div>
             </div>
         </Transition>
-
-        <div class="info-box notice">
-            <font-awesome-icon :icon="faShieldAlt" />
-            <p>O pagamento será realizado no momento da <strong>entrega ou retirada</strong> do seu pedido.</p>
-        </div>
 
         <div class="terms-section">
             <Field name="agreedToTerms" type="checkbox" :value="true" :unchecked-value="false"
@@ -83,32 +207,83 @@ function finalizeOrder(formValues: any) {
                 <label class="checkbox-label">
                     <input type="checkbox" v-bind="field" :checked="value" />
                     <span class="checkbox-custom"></span>
-                    Li e aceito os termos e condições.
+                    Li e aceito os
+                    <a href="/termos-condicoes" target="_blank" class="terms-link">
+                        termos e condições
+                    </a>.
                 </label>
             </Field>
             <ErrorMessage name="agreedToTerms" class="error-message" />
         </div>
 
-        <button type="submit" class="action-button" :disabled="!meta.valid">
-            Finalizar Pedido
-            <font-awesome-icon :icon="faReceipt" />
+        <button type="submit" class="action-button" :disabled="!meta.valid || isProcessing">
+            <span v-if="isProcessing">
+                <font-awesome-icon :icon="faSpinner" spin /> Processando...
+            </span>
+            <span v-else>
+                {{ values.paymentMode === 'online' ? 'Ir para Pagamento' : 'Finalizar Pedido' }}
+                <font-awesome-icon :icon="faReceipt" />
+            </span>
         </button>
     </Form>
 </template>
-
 
 <style scoped>
 .section-subtitle {
     font-size: 1.2rem;
     font-weight: 600;
     color: var(--c-text);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.subsection-title {
+    font-size: 1rem;
+    color: var(--c-text-light);
+    margin: 1.5rem 0 0.8rem 0;
+}
+
+.mode-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-family: var(--font-title);
+}
+
+.mode-buttons span {
+    font-family: var(--font-title);
+}
+
+.mode-buttons button {
+    padding: 1.5rem;
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 600;
+    color: var(--c-text-light);
+    transition: all 0.2s;
+}
+
+.mode-buttons button.active {
+    border-color: var(--c-azul);
+    background: #f0f9ff;
+    color: var(--c-azul);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+}
+
+.mode-buttons svg {
+    font-size: 1.8rem;
 }
 
 .choice-buttons {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.8rem;
 }
 
 .choice-buttons button {
@@ -116,13 +291,13 @@ function finalizeOrder(formValues: any) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
-    padding: 1.5rem 1rem;
-    font-size: 1rem;
+    gap: 0.5rem;
+    padding: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
     font-family: 'Fredoka', sans-serif;
-    border: 2px solid var(--color-border);
-    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
     background-color: var(--c-branco);
     cursor: pointer;
     transition: all 0.2s ease;
@@ -137,11 +312,39 @@ function finalizeOrder(formValues: any) {
     border-color: var(--c-rosa);
     background-color: #fff1f4;
     color: var(--c-rosa);
-    box-shadow: 0 4px 10px rgba(254, 117, 143, 0.1);
 }
 
-.choice-buttons svg {
-    font-size: 1.8rem;
+.mp-card {
+    background: #009ee3;
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    box-shadow: 0 8px 20px rgba(0, 158, 227, 0.25);
+}
+
+.mp-logo {
+    width: 60px;
+    height: 60px;
+    background: white;
+    border-radius: 50%;
+    padding: 10px;
+    object-fit: contain;
+}
+
+.mp-text h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.mp-text p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    line-height: 1.4;
 }
 
 .info-box {
@@ -177,6 +380,20 @@ function finalizeOrder(formValues: any) {
 
 .terms-section {
     margin-top: 2rem;
+}
+
+.terms-link {
+    font-weight: 700;
+    color: var(--c-azul);
+    text-decoration: none;
+    border-bottom: 1px dashed transparent;
+    transition: all 0.2s ease;
+    margin-left: 3px;
+}
+
+.terms-link:hover {
+    color: var(--c-rosa);
+    border-bottom: 1px dashed var(--c-rosa);
 }
 
 .checkbox-label {
@@ -268,7 +485,6 @@ function finalizeOrder(formValues: any) {
     padding-left: .2rem;
 }
 
-/* Animação de fade */
 .fade-step-enter-active,
 .fade-step-leave-active {
     transition: opacity 0.3s ease, transform 0.3s ease;
@@ -278,5 +494,17 @@ function finalizeOrder(formValues: any) {
 .fade-step-leave-to {
     opacity: 0;
     transform: translateY(10px);
+}
+
+@media (max-width: 600px) {
+    .mode-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .mp-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
 }
 </style>

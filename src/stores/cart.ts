@@ -140,7 +140,7 @@ export const useCartStore = defineStore('cart', () => {
         if (serverCart && serverCart.itens) {
           console.log(`✅ Carrinho recuperado: ${serverCart.itens.length} itens.`)
           serverCart.itens.forEach((serverItem: any) => {
-            const product = productCatalog.value.find((p) => p.id === serverItem.produto_id)
+            const product = productCatalog.value.find((p) => p.id === serverItem.produtoId)
             if (product) {
               product.quantity = serverItem.quantidade
             }
@@ -262,5 +262,6 @@ export const useCartStore = defineStore('cart', () => {
     getAnonItems,
     fetchUserCart: loadUserCartFromServer,
     isSyncing,
+    getAuthToken,
   }
 })

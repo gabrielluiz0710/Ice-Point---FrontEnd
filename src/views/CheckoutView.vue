@@ -11,7 +11,9 @@ import {
     faUser,
     faReceipt,
     faChevronDown,
-    faFileInvoiceDollar
+    faFileInvoiceDollar,
+    faStore,
+    faMapPin
 } from '@fortawesome/free-solid-svg-icons'
 import CheckoutProgressBar from '@/components/shopping-cart/CheckoutProgressBar.vue'
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary.vue'
@@ -192,7 +194,7 @@ onMounted(() => {
                                         <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
                                         <div class="address-line-group">
                                             <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
-                                                }}</span>
+                                            }}</span>
                                             <span>CEP: {{ checkoutStore.address.cep }}</span>
                                         </div>
                                     </template>
@@ -212,20 +214,19 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <div v-if="checkoutStore.deliveryMethod === 'pickup'" class="address-summary-card">
-                                <h4 class="address-card-title">Endereço de Faturamento</h4>
-                                <div class="address-card-body">
-                                    <p class="address-line">{{ checkoutStore.address.street }}, {{
-                                        checkoutStore.address.number }}</p>
-                                    <p v-if="checkoutStore.address.complement" class="address-line complement">{{
-                                        checkoutStore.address.complement
-                                        }}</p>
-                                    <p class="address-line">{{ checkoutStore.address.neighborhood }}</p>
-                                    <div class="address-line-group">
-                                        <span>{{ checkoutStore.address.city }} / {{ checkoutStore.address.state
-                                            }}</span>
-                                        <span>CEP: {{ checkoutStore.address.cep }}</span>
+                            <div v-if="checkoutStore.deliveryMethod === 'pickup'" class="store-card">
+                                <div class="store-icon-wrapper">
+                                    <font-awesome-icon :icon="faStore" />
+                                </div>
+                                <div class="store-info">
+                                    <h4 class="store-title">Ponto de Retirada</h4>
+                                    <p class="store-name"><strong>Ice Point Sorveteria</strong></p>
+                                    <div class="store-address">
+                                        <font-awesome-icon :icon="faMapPin" class="pin-icon" />
+                                        <span>Avenida Padre Eddie Bernardes Silva, 965<br>Bairro de Lourdes -
+                                            Uberaba/MG</span>
                                     </div>
+                                    <span class="pickup-hint">Você deve retirar os carrinhos neste local.</span>
                                 </div>
                             </div>
                         </div>
@@ -431,6 +432,13 @@ onMounted(() => {
         align-items: flex-start;
         gap: 0.5rem;
     }
+
+    .store-card {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+        gap: 1rem;
+    }
 }
 
 .checkout-sidebar {
@@ -545,5 +553,86 @@ onMounted(() => {
     .mobile-summary {
         display: block;
     }
+}
+
+.store-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1pc solid #bae6fd;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.store-card::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+}
+
+.store-icon-wrapper {
+    background-color: var(--c-branco);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--c-azul);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.store-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.store-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--c-azul);
+    font-weight: 700;
+    margin: 0;
+    opacity: 0.8;
+}
+
+.store-name {
+    font-size: 1.2rem;
+    color: var(--c-text);
+    margin: 0;
+}
+
+.store-address {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--c-text-dark);
+    line-height: 1.4;
+}
+
+.pin-icon {
+    margin-top: 3px;
+    color: var(--c-rosa);
+}
+
+.pickup-hint {
+    font-size: 0.8rem;
+    color: red;
+    margin-top: 0.5rem;
+    font-style: italic;
 }
 </style>

@@ -14,6 +14,7 @@ import LoginRegisterView from '../views/LoginRegisterView.vue'
 import UpdatePasswordView from '../views/UpdatePasswordView.vue'
 import PrivacyPolicyView from '../views/PrivacyPolicyView.vue'
 import DataDeletionView from '../views/DataDeletionView.vue'
+import TermsAndConditions from '../views/TermsAndConditions.vue'
 import TermsView from '../views/TermsView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import { useUserStore } from '@/stores/user'
@@ -42,9 +43,10 @@ const router = createRouter({
       component: CheckoutView,
     },
     {
-      path: '/pedido-confirmado',
+      path: '/pedido-confirmado/:hash',
       name: 'OrderConfirmation',
       component: OrderConfirmationView,
+      props: true,
     },
     {
       path: '/sobre',
@@ -103,6 +105,10 @@ const router = createRouter({
     {
       path: '/exclusao-dados',
       component: DataDeletionView,
+    },
+    {
+      path: '/termos-condicoes',
+      component: TermsAndConditions,
     },
     {
       path: '/termos',

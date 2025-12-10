@@ -42,7 +42,7 @@ const isAllComplete = computed(() => props.currentStep >= props.steps.length)
     left: 0;
     right: 0;
     height: 4px;
-    background-color: var(--c-rosa-light);
+    background-color: var(--c-cinza);
     border-radius: 2px;
     z-index: 1;
 }
@@ -68,11 +68,11 @@ const isAllComplete = computed(() => props.currentStep >= props.steps.length)
     height: 40px;
     border-radius: 50%;
     background-color: var(--c-branco);
-    border: 3px solid var(--c-rosa-light);
+    border: 3px solid var(--c-cinza);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--c-rosa-light);
+    color: var(--c-cinza);
     transition: all 0.4s ease;
     margin-bottom: 0.5rem;
 }
