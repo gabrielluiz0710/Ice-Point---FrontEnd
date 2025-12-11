@@ -222,6 +222,10 @@ function cleanString(str: string | undefined | null) {
 }
 
 const onSubmit = handleSubmit((formValues) => {
+    if (!checkoutStore.isCartSelectionComplete) {
+        return;
+    }
+
     checkoutStore.deliveryMethod = formValues.deliveryMethod as 'delivery' | 'pickup';
 
     if (formValues.deliveryMethod === 'delivery') {

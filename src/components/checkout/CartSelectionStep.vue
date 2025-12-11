@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useCheckoutStore } from '@/stores/checkout'
 import { useCartStore } from '@/stores/cart'
-import { faSnowflake, faCheck, faMinus, faPlus, faSpinner, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
+import { faSnowflake, faCheck, faMinus, faPlus, faSpinner, faExclamationTriangle, faFaceFrown, faCalendarDays } from '@fortawesome/free-solid-svg-icons'
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -197,6 +198,31 @@ onMounted(() => {
             <button class="retry-btn" @click="fetchAvailability">Tentar Novamente</button>
         </div>
 
+        <div v-else-if="availability && availability.totalAvailable === 0" class="state-container empty-state">
+            <div class="sad-icon-wrapper">
+                <font-awesome-icon :icon="faFaceFrown" class="sad-icon" />
+            </div>
+
+            <h3>Poxa! Sem carrinhos disponíveis.</h3>
+            <p class="empty-desc">
+                Infelizmente não temos carrinhos livres para esta data e horário.
+            </p>
+
+            <div class="empty-actions">
+                <a href="https://wa.me/5534999658035" target="_blank" class="action-btn whatsapp">
+                    <font-awesome-icon :icon="faWhatsapp" />
+                    Falar no WhatsApp
+                </a>
+
+                <span class="divider-text">ou</span>
+
+                <p class="retry-text">
+                    <font-awesome-icon :icon="faCalendarDays" />
+                    Tente buscar por outra data e horário
+                </p>
+            </div>
+        </div>
+
         <div v-else class="selection-content">
             <p class="instruction">
                 Selecione as cores dos carrinhos para entrega em
@@ -220,14 +246,14 @@ onMounted(() => {
                         <h3>Carrinho {{ color }}</h3>
 
                         <div class="counter-control">
-                            <button class="btn-control minus" @click="decrement(color)"
+                            <button type="button" class="btn-control minus" @click="decrement(color)"
                                 :disabled="selections[color] === 0">
                                 <font-awesome-icon :icon="faMinus" />
                             </button>
 
                             <span class="qty-display">{{ selections[color] }}</span>
 
-                            <button class="btn-control plus" @click="increment(color)"
+                            <button type="button" class="btn-control plus" @click="increment(color)"
                                 :disabled="selections[color] >= qtdAvailable || currentSelectedCount >= checkoutStore.requiredCartsCount">
                                 <font-awesome-icon :icon="faPlus" />
                             </button>
@@ -313,6 +339,7 @@ onMounted(() => {
 }
 
 .retry-btn {
+    font-family: var(--font-title);
     margin-top: 1rem;
     padding: 0.5rem 1rem;
     background: transparent;
@@ -320,6 +347,138 @@ onMounted(() => {
     color: #ef4444;
     border-radius: 8px;
     cursor: pointer;
+}
+
+.empty-state {
+    padding: 2rem 1rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.sad-icon-wrapper {
+    background: #f1f5f9;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.sad-icon {
+    font-size: 3rem;
+    color: #94a3b8;
+}
+
+.empty-state h3 {
+    color: #334155;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-title, sans-serif);
+}
+
+.empty-desc {
+    color: #64748b;
+    margin-bottom: 2rem;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+}
+
+.empty-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 50px;
+    border: none;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.whatsapp {
+    background-color: #25D366;
+    color: white;
+    box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);
+}
+
+.action-btn.outline {
+    background-color: white;
+    border: 2px solid #e2e8f0;
+    color: #64748b;
+}
+
+.action-btn.outline:hover {
+    border-color: var(--c-azul, #0ea5e9);
+    color: var(--c-azul, #0ea5e9);
+}
+
+.divider-text {
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    font-weight: 500;
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.divider-text::before,
+.divider-text::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.divider-text::before {
+    margin-right: 10px;
+}
+
+.divider-text::after {
+    margin-left: 10px;
+}
+
+.retry-text {
+    margin-top: 0.5rem;
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: #f8fafc;
+    padding: 0.8rem;
+    border-radius: 12px;
+    width: 100%;
+}
+
+.retry-text svg {
+    color: var(--c-azul, #0ea5e9);
+    font-size: 1.1rem;
 }
 
 .cards-grid {

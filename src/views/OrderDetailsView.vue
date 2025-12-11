@@ -470,7 +470,7 @@ onMounted(() => {
                                         {{ order.delivery.method === 'delivery' ? 'Entrega' : 'Retirada' }}
                                     </span>
                                 </div>
-                                <div v-if="order.delivery.method === 'delivery'" class="schedule-box">
+                                <div class="schedule-box">
                                     <div><strong>Agendado:</strong> {{ order.date }}</div>
                                     <div><strong>Horário:</strong> Aprox. {{ order.time }}</div>
                                 </div>
