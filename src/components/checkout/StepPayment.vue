@@ -152,11 +152,11 @@ async function processOnlinePayment(orderId: number) {
         <div class="payment-options-section">
             <h3 class="section-subtitle">Quando deseja pagar?</h3>
             <div class="mode-buttons">
-                <button type="button" :class="{ active: values.paymentMode === 'online' }"
+                <!-- <button class="online" type="button" :class="{ active: values.paymentMode === 'online' }"
                     @click="() => { setFieldValue('paymentMode', 'online'); checkoutStore.paymentMode = 'online'; }">
                     <font-awesome-icon :icon="faGlobe" />
                     <span>Pagar Agora (Online)</span>
-                </button>
+                </button> -->
 
                 <button type="button" :class="{ active: values.paymentMode === 'offline' }"
                     @click="() => { setFieldValue('paymentMode', 'offline'); checkoutStore.paymentMode = 'offline'; }">
@@ -252,6 +252,10 @@ async function processOnlinePayment(orderId: number) {
 
 .mode-buttons span {
     font-family: var(--font-title);
+}
+
+.online {
+    display: none;
 }
 
 .mode-buttons button {

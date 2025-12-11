@@ -23,6 +23,7 @@ import AdminView from '../views/AdminView.vue'
 import AdminDashboard from '../views/admin/DashboardView.vue'
 import AdminProductsView from '../views/admin/ProductsView.vue'
 import AdminUsersView from '../views/admin/UsersView.vue'
+import { useCartStore } from '@/stores/cart'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -167,6 +168,16 @@ router.beforeEach(async (to, from, next) => {
   if (!userStore.isReady) {
     console.log('[Router] App iniciou ou recarregou. Verificando sessão...')
     await userStore.initializeAuth()
+  }
+
+  if (to.name === 'checkout') {
+    const cartStore = useCartStore()
+    const MIN_QUANTITY = 80
+
+    if (cartStore.totalCartQuantity < MIN_QUANTITY) {
+      console.warn('[Router] Tentativa de acesso ao checkout sem a quantidade mínima.')
+      return next({ name: 'carrinho' })
+    }
   }
 
   const isAuthenticated = userStore.isAuthenticated

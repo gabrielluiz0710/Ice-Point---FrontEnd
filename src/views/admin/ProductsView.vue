@@ -11,6 +11,7 @@ import ToastNotification from '@/components/admin/products/ToastNotification.vue
 
 const userStore = useUserStore()
 const API_URL = import.meta.env.VITE_API_URL
+const isAdmin = computed(() => userStore.user?.tipo === 'ADMIN')
 
 const togglingHighlight = ref<number | null>(null)
 const products = ref<any[]>([])
@@ -240,12 +241,12 @@ onMounted(() => {
                 <p class="subtitle">Organize seu catálogo, preços e estoque.</p>
             </div>
             <div class="header-actions">
-                <button class="btn-price-update" @click="showPriceModal = true">
-                    <font-awesome-icon :icon="faTags" />
+                <button v-if="isAdmin" class="btn-price-update" @click="showPriceModal = true"> <font-awesome-icon
+                        :icon="faTags" />
                     <span>Atualizar Preço da Categoria</span>
                 </button>
 
-                <button class="btn-create" @click="openCreateModal">
+                <button v-if="isAdmin" class="btn-create" @click="openCreateModal">
                     <font-awesome-icon :icon="faPlus" />
                     <span>Novo Produto</span>
                 </button>
@@ -294,7 +295,7 @@ onMounted(() => {
                                 <div v-else class="placeholder-icon">
                                     <font-awesome-icon :icon="faIceCream" />
                                 </div>
-                                <button class="highlight-btn"
+                                <button v-if="isAdmin" class="highlight-btn"
                                     :class="{ 'active': product.destaque, 'loading': togglingHighlight === product.id }"
                                     @click.stop="toggleHighlight(product)"
                                     :title="product.destaque ? 'Remover destaque' : 'Destacar produto'">
@@ -306,10 +307,12 @@ onMounted(() => {
                                 </span>
 
                                 <div class="card-actions-overlay desktop-only">
-                                    <button class="action-btn edit" @click="openEditModal(product)" title="Editar">
+                                    <button v-if="isAdmin" class="action-btn edit" @click="openEditModal(product)"
+                                        title="Editar">
                                         <font-awesome-icon :icon="faEdit" />
                                     </button>
-                                    <button class="action-btn delete" @click="confirmDelete(product)" title="Excluir">
+                                    <button v-if="isAdmin" class="action-btn delete" @click="confirmDelete(product)"
+                                        title="Excluir">
                                         <font-awesome-icon :icon="faTrashAlt" />
                                     </button>
                                 </div>
@@ -321,11 +324,12 @@ onMounted(() => {
                                 <div class="product-meta">
                                     <span class="product-price">{{ formatCurrency(product.preco_unitario) }}</span>
 
-                                    <div class="mobile-actions">
+                                    <div v-if="isAdmin" class="mobile-actions">
                                         <button class="mobile-btn edit" @click="openEditModal(product)">
                                             <font-awesome-icon :icon="faEdit" />
                                         </button>
-                                        <button class="mobile-btn delete" @click="confirmDelete(product)">
+                                        <button v-if="isAdmin" class="mobile-btn delete"
+                                            @click="confirmDelete(product)">
                                             <font-awesome-icon :icon="faTrashAlt" />
                                         </button>
                                     </div>

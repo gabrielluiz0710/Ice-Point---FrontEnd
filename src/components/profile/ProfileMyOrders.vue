@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { faEye, faHistory } from '@fortawesome/free-solid-svg-icons'
+import { faEye, faHistory, faClock, faCalendarDay } from '@fortawesome/free-solid-svg-icons'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/service/supabase'
 
@@ -21,6 +21,7 @@ interface ApiResponse {
 interface FormattedOrder {
     id: string
     date: string
+    scheduledDate: string
     status: string
     total: number
 }
@@ -35,7 +36,16 @@ const completedOrders = ref<FormattedOrder[]>([])
 
 const formatDate = (dateString: string) => {
     if (!dateString) return '--/--/----'
-    const date = new Date(dateString)
+
+    if (dateString.includes('T')) {
+        const date = new Date(dateString)
+        return new Intl.DateTimeFormat('pt-BR').format(date)
+    }
+
+    const [year, month, day] = dateString.split('-').map(Number)
+
+    const date = new Date(year, month - 1, day)
+
     return new Intl.DateTimeFormat('pt-BR').format(date)
 }
 
@@ -64,19 +74,16 @@ const fetchMyOrders = async () => {
 
         const data: ApiResponse = await response.json()
 
-        activeOrders.value = data.ativos.map(order => ({
+        const mapOrder = (order: BackendOrder): FormattedOrder => ({
             id: String(order.id),
             date: formatDate(order.dataCriacao),
+            scheduledDate: order.dataAgendada ? formatDate(order.dataAgendada) : formatDate(order.dataCriacao),
             status: formatStatusText(order.status),
             total: Number(order.total)
-        }))
+        })
 
-        completedOrders.value = data.historico.map(order => ({
-            id: String(order.id),
-            date: formatDate(order.dataCriacao),
-            status: formatStatusText(order.status),
-            total: Number(order.total)
-        }))
+        activeOrders.value = data.ativos.map(mapOrder)
+        completedOrders.value = data.historico.map(mapOrder)
 
     } catch (error) {
         console.error("Falha ao carregar pedidos:", error)
@@ -98,6 +105,7 @@ const formatStatusText = (status: string) => {
         'EM_PREPARACAO': 'Em Preparação',
         'SAIU_PARA_ENTREGA': 'Saiu para Entrega',
         'ENTREGUE': 'Entregue',
+        'CONCLUIDO': 'Concluído',
         'CANCELADO': 'Cancelado'
     }
     return map[status] || status
@@ -119,6 +127,9 @@ const getStatusClass = (status: string) => {
             return 'status-shipping';
 
         case 'Entregue':
+            return 'status-shipping';
+
+        case 'Concluído':
             return 'status-success';
 
         case 'Cancelado':
@@ -159,7 +170,22 @@ const getStatusClass = (status: string) => {
                 <div v-if="!showHistory" v-for="order in activeOrders" :key="order.id" class="order-card">
                     <div>
                         <h3>Pedido #{{ order.id }}</h3>
-                        <p>Data: {{ order.date }}</p>
+                        <div class="dates-container">
+                            <p class="date-meta">
+                                <font-awesome-icon :icon="faClock" class="meta-icon" />
+                                Solicitado em: {{ order.date }}
+                            </p>
+
+                            <div class="schedule-badge">
+                                <div class="icon-box">
+                                    <font-awesome-icon :icon="faCalendarDay" />
+                                </div>
+                                <div class="schedule-text">
+                                    <small>Agendado para</small>
+                                    <strong>{{ order.scheduledDate }}</strong>
+                                </div>
+                            </div>
+                        </div>
                         <span class="status-badge" :class="getStatusClass(order.status)">{{ order.status }}</span>
                     </div>
                     <div class="order-details">
@@ -173,7 +199,22 @@ const getStatusClass = (status: string) => {
                 <div v-if="showHistory" v-for="order in completedOrders" :key="order.id" class="order-card">
                     <div>
                         <h3>Pedido #{{ order.id }}</h3>
-                        <p>Data: {{ order.date }}</p>
+                        <div class="dates-container">
+                            <p class="date-meta">
+                                <font-awesome-icon :icon="faClock" class="meta-icon" />
+                                Solicitado em: {{ order.date }}
+                            </p>
+
+                            <div class="schedule-badge">
+                                <div class="icon-box">
+                                    <font-awesome-icon :icon="faCalendarDay" />
+                                </div>
+                                <div class="schedule-text">
+                                    <small>Agendado para</small>
+                                    <strong>{{ order.scheduledDate }}</strong>
+                                </div>
+                            </div>
+                        </div>
                         <span class="status-badge" :class="getStatusClass(order.status)">{{ order.status }}</span>
                     </div>
                     <div class="order-details">
@@ -259,7 +300,7 @@ const getStatusClass = (status: string) => {
 .order-card {
     background: #fff;
     border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1.5rem;
     display: flex;
     justify-content: space-between;
@@ -280,6 +321,96 @@ const getStatusClass = (status: string) => {
 .order-card p {
     margin: 0;
     color: var(--c-text-light);
+}
+
+.dates-container {
+    margin: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.date-meta {
+    margin: 0;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meta-icon {
+    font-size: 0.8rem;
+}
+
+.schedule-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    padding: 6px 12px;
+    gap: 10px;
+    width: fit-content;
+    margin-top: 4px;
+    transition: background 0.3s;
+}
+
+.order-card:hover .schedule-badge {
+    background-color: #e0f2fe;
+}
+
+.icon-box {
+    color: var(--c-azul);
+    font-size: 1.2rem;
+}
+
+@keyframes swing {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    20% {
+        transform: rotate(15deg);
+    }
+
+    40% {
+        transform: rotate(-10deg);
+    }
+
+    60% {
+        transform: rotate(5deg);
+    }
+
+    80% {
+        transform: rotate(-5deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+.order-card:hover .icon-box svg {
+    animation: swing 0.8s ease;
+}
+
+.schedule-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.schedule-text small {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.schedule-text strong {
+    color: var(--c-azul-dark);
+    font-size: 1rem;
 }
 
 .order-details {

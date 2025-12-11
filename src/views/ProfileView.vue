@@ -110,12 +110,14 @@ function closeUploadModal() {
     }
 }
 
-async function confirmUpload() {
-    if (!selectedFile.value) return
+async function confirmUpload(processedFile?: File) {
+    const fileToUpload = processedFile || selectedFile.value
+
+    if (!fileToUpload) return
 
     try {
         isUploading.value = true
-        await userStore.uploadAvatar(selectedFile.value)
+        await userStore.uploadAvatar(fileToUpload)
 
         closeUploadModal()
     } catch (error) {

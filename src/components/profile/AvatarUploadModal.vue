@@ -1,14 +1,74 @@
 <script setup lang="ts">
-import { faTimes, faCheck, faCloudUploadAlt, faExchangeAlt } from '@fortawesome/free-solid-svg-icons'
+import { ref, watch } from 'vue'
+import { faTimes, faCheck, faCloudUploadAlt, faExchangeAlt, faRotateRight } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-defineProps<{
+const props = defineProps<{
     isOpen: boolean
     previewUrl: string | null
     isLoading: boolean
 }>()
 
 const emit = defineEmits(['close', 'confirm', 'retry'])
+
+const rotation = ref(0)
+const isProcessing = ref(false)
+
+watch(() => props.previewUrl, () => {
+    rotation.value = 0
+})
+
+const rotateImage = () => {
+    rotation.value = (rotation.value + 90) % 360
+}
+
+const processAndConfirm = async () => {
+    if (!props.previewUrl) return
+
+    if (rotation.value === 0) {
+        emit('confirm', null)
+        return
+    }
+
+    isProcessing.value = true
+
+    try {
+        const image = new Image()
+        image.src = props.previewUrl
+
+        await new Promise((resolve) => { image.onload = resolve })
+
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) return
+
+        if (rotation.value === 90 || rotation.value === 270) {
+            canvas.width = image.height
+            canvas.height = image.width
+        } else {
+            canvas.width = image.width
+            canvas.height = image.height
+        }
+
+        ctx.translate(canvas.width / 2, canvas.height / 2)
+        ctx.rotate((rotation.value * Math.PI) / 180)
+        ctx.drawImage(image, -image.width / 2, -image.height / 2)
+
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const processedFile = new File([blob], "avatar-rotacionado.jpg", { type: "image/jpeg" })
+                emit('confirm', processedFile)
+            }
+            isProcessing.value = false
+        }, 'image/jpeg', 0.9)
+
+    } catch (error) {
+        console.error("Erro ao processar imagem", error)
+        isProcessing.value = false
+        emit('confirm', null)
+    }
+}
 </script>
 
 <template>
@@ -17,7 +77,7 @@ const emit = defineEmits(['close', 'confirm', 'retry'])
             <div class="modal-container">
                 <div class="modal-header">
                     <h3>Nova Foto de Perfil</h3>
-                    <button class="close-btn" @click="$emit('close')" :disabled="isLoading">
+                    <button class="close-btn" @click="$emit('close')" :disabled="isLoading || isProcessing">
                         <font-awesome-icon :icon="faTimes" />
                     </button>
                 </div>
@@ -25,27 +85,37 @@ const emit = defineEmits(['close', 'confirm', 'retry'])
                 <div class="modal-body">
                     <div class="preview-area">
                         <div class="image-wrapper">
-                            <img v-if="previewUrl" :src="previewUrl" alt="Pré-visualização" class="preview-img" />
+                            <img v-if="previewUrl" :src="previewUrl" alt="Pré-visualização" class="preview-img"
+                                :style="{ transform: `rotate(${rotation}deg)` }" />
                         </div>
-                        <p class="preview-text">Sua foto ficará assim</p>
+
+                        <div class="controls">
+                            <button class="btn-rotate" @click="rotateImage" title="Girar foto">
+                                <font-awesome-icon :icon="faRotateRight" /> Girar
+                            </button>
+                        </div>
+
+                        <p class="preview-text">Ajuste a rotação se necessário</p>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn-cancel" @click="$emit('close')" :disabled="isLoading">
+                    <button class="btn-cancel" @click="$emit('close')" :disabled="isLoading || isProcessing">
                         Cancelar
                     </button>
 
-                    <button class="btn-retry" @click="$emit('retry')" :disabled="isLoading" title="Escolher outra foto">
+                    <button class="btn-retry" @click="$emit('retry')" :disabled="isLoading || isProcessing"
+                        title="Escolher outra foto">
                         <font-awesome-icon :icon="faExchangeAlt" /> Trocar
                     </button>
 
-                    <button class="btn-confirm" @click="$emit('confirm')" :disabled="isLoading">
-                        <span v-if="!isLoading">
+                    <button class="btn-confirm" @click="processAndConfirm" :disabled="isLoading || isProcessing">
+                        <span v-if="!isLoading && !isProcessing">
                             <font-awesome-icon :icon="faCheck" /> Salvar
                         </span>
                         <span v-else>
-                            <font-awesome-icon :icon="faCloudUploadAlt" beat /> Enviando...
+                            <font-awesome-icon :icon="faCloudUploadAlt" beat />
+                            {{ isProcessing ? 'Processando...' : 'Enviando...' }}
                         </span>
                     </button>
                 </div>
@@ -117,17 +187,20 @@ const emit = defineEmits(['close', 'confirm', 'retry'])
 
 .preview-area {
     text-align: center;
+    width: 100%;
 }
 
 .image-wrapper {
-    width: 150px;
-    height: 150px;
+    width: 200px;
+    height: 200px;
     border-radius: 50%;
     border: 4px solid var(--c-azul, #00bcd4);
     padding: 4px;
     margin: 0 auto 1rem;
     box-shadow: 0 4px 15px rgba(0, 188, 212, 0.2);
     overflow: hidden;
+    position: relative;
+    background-color: #f0f0f0;
 }
 
 .preview-img {
@@ -135,84 +208,37 @@ const emit = defineEmits(['close', 'confirm', 'retry'])
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.controls {
+    margin: 1rem 0;
+}
+
+.btn-rotate {
+    font-family: var(--font-title);
+    background-color: #f0f2f5;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 20px;
+    color: #333;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-rotate:hover {
+    background-color: #e4e6eb;
+    transform: scale(1.05);
 }
 
 .preview-text {
     color: #666;
     font-size: 0.9rem;
     margin-top: 0.5rem;
-}
-
-.modal-footer {
-    padding: 1.5rem;
-    background-color: #f9f9f9;
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-}
-
-.btn-cancel {
-    padding: 0.8rem 1.5rem;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 8px;
-    color: #666;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: var(--font-title);
-}
-
-.btn-cancel:hover:not(:disabled) {
-    background: #f1f1f1;
-}
-
-.btn-confirm {
-    padding: 0.8rem 1.5rem;
-    border: none;
-    background: var(--c-azul, #00bcd4);
-    color: white;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-    font-family: var(--font-title);
-}
-
-.btn-confirm:hover:not(:disabled) {
-    filter: brightness(1.1);
-    box-shadow: 0 4px 10px rgba(0, 188, 212, 0.3);
-}
-
-.btn-confirm:disabled,
-.btn-cancel:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .modal-footer {
@@ -287,6 +313,28 @@ const emit = defineEmits(['close', 'confirm', 'retry'])
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 576px) {

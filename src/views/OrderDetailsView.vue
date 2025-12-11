@@ -20,12 +20,17 @@ import {
     faPhone,
     faReceipt,
     faCheckCircle,
-    faClock
+    faCheckDouble,
+    faClock,
 } from '@fortawesome/free-solid-svg-icons'
+import CancelOrderModal from '@/components/orders/CancelOrderModal.vue'
+import LateCancelModal from '@/components/orders/LateCancelModal.vue'
+import { faPix } from '@fortawesome/free-brands-svg-icons'
 
 const route = useRoute()
 const router = useRouter()
 const API_URL = import.meta.env.VITE_API_URL
+const showLateCancelModal = ref(false)
 
 const cartImages: Record<string, string> = {
     'azul': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/azul.webp',
@@ -48,6 +53,7 @@ interface Order {
     status: string
     displayStatus: string
     date: string
+    requestDate: string
     time: string
     customer: {
         name: string
@@ -65,6 +71,7 @@ interface Order {
     }
     items: OrderItem[]
     summary: { deliveryFee: number, discount: number }
+    rawDeliveryDate: Date
 }
 
 interface BackendOrder {
@@ -103,7 +110,8 @@ const goBackToOrders = () => {
 
 const order = ref<Order | null>(null)
 const isLoading = ref(true)
-
+const showCancelModal = ref(false)
+const isCancelling = ref(false)
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -111,8 +119,21 @@ const formatCurrency = (value: number) => {
 
 const formatDate = (dateString: string) => {
     if (!dateString) return ''
-    const date = new Date(dateString)
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
     return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(date)
+}
+
+const formatIsoDate = (isoString: string) => {
+    if (!isoString) return ''
+    const date = new Date(isoString)
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date)
 }
 
 const formatTime = (dateString: string) => {
@@ -131,6 +152,7 @@ const getDisplayStatus = (status: string) => {
         'EM_PREPARACAO': 'Em Preparação',
         'SAIU_PARA_ENTREGA': 'Saiu para Entrega',
         'ENTREGUE': 'Entregue',
+        'CONCLUIDO': 'Concluído',
         'CANCELADO': 'Cancelado'
     }
     return map[status] || status
@@ -160,12 +182,23 @@ const fetchOrderDetails = async (orderId: string) => {
 
         const normalizedColor = rawCartColor.toLowerCase();
         const cartImgUrl = cartImages[normalizedColor] || cartImages['default'];
+        const datePart = data.dataAgendada || data.dataSolicitacao;
+        const timePart = data.horaAgendada || '00:00:00';
+        const [y, m, d] = datePart.split('-').map(Number);
+        const [h, min, s] = timePart.split(':').map(Number);
+
+        const deliveryDateObj = new Date(y, m - 1, d, h, min, s || 0);
+
+        console.log("📅 [DEBUG] Data Entrega (Banco):", datePart, timePart);
+        console.log("📅 [DEBUG] Objeto Date Criado:", deliveryDateObj.toString());
 
         order.value = {
             id: String(data.id),
             status: data.status,
             displayStatus: getDisplayStatus(data.status),
             date: formatDate(data.dataAgendada || data.dataSolicitacao),
+            requestDate: formatIsoDate(data.dataSolicitacao),
+            rawDeliveryDate: deliveryDateObj,
             time: data.horaAgendada || formatTime(data.dataSolicitacao),
             customer: {
                 name: data.nomeCliente || 'Cliente',
@@ -206,10 +239,92 @@ const fetchOrderDetails = async (orderId: string) => {
 const subtotal = computed(() => order.value?.items.reduce((t, i) => t + i.price * i.quantity, 0) || 0)
 const grandTotal = computed(() => (subtotal.value + (order.value?.summary.deliveryFee || 0)) - (order.value?.summary.discount || 0))
 
+function getNowInBrazil() {
+    const now = new Date();
+
+    const brString = now.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+    const cleanString = brString.replace(',', '');
+
+    const [datePart, timePart] = cleanString.split(" ");
+
+    if (!datePart || !timePart) {
+        console.error("Erro ao fazer parse da data BR:", brString);
+        return new Date();
+    }
+
+    const [day, month, year] = datePart.split("/").map(Number);
+    const [hour, minute, second] = timePart.split(":").map(Number);
+
+    return new Date(year, month - 1, day, hour, minute, second || 0);
+}
+
+
+const canCancel = computed(() => {
+    if (!order.value || order.value.status === 'CANCELADO' || order.value.status === 'ENTREGUE' || order.value.status === 'CONCLUIDO') {
+        return false;
+    }
+
+    const nowBr = getNowInBrazil();
+    const deliveryDate = order.value.rawDeliveryDate;
+
+    const diffMs = deliveryDate.getTime() - nowBr.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    console.log("⏰ [DEBUG] Agora (BR):", nowBr.toString());
+    console.log("📦 [DEBUG] Entrega:", deliveryDate.toString());
+    console.log("⏳ [DEBUG] Diferença (horas):", diffHours.toFixed(2));
+    console.log("✅ [DEBUG] Pode cancelar?", diffHours >= 2);
+
+    return diffHours >= 2;
+});
+
+const handleCancelClick = () => {
+    if (canCancel.value) {
+        showCancelModal.value = true
+    } else {
+        showLateCancelModal.value = true
+    }
+}
+
+const handleCancelOrder = async (reason: string) => {
+    if (!order.value) return
+    isCancelling.value = true
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+
+        const response = await fetch(`${API_URL}/encomendas/${order.value.id}/cancelar`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ motivo: reason })
+        })
+
+        if (!response.ok) {
+            const err = await response.json()
+            throw new Error(err.message || 'Erro ao cancelar')
+        }
+
+        order.value.status = 'CANCELADO'
+        order.value.displayStatus = 'Cancelado'
+        showCancelModal.value = false
+
+    } catch (error) {
+        console.error(error)
+        alert('Não foi possível cancelar o pedido. Tente novamente ou contate o suporte.')
+    } finally {
+        isCancelling.value = false
+    }
+}
+
 const paymentDetails = computed(() => {
     if (!order.value) return { label: '...', icon: faCreditCard, color: '#64748b' }
     const m = order.value.payment.method
-    if (m === 'PIX') return { label: 'Pix', icon: faQrcode, color: '#32BCAD' }
+    if (m === 'PIX') return { label: 'Pix', icon: faPix, color: '#32BCAD' }
     if (m === 'CASH') return { label: 'Dinheiro', icon: faMoneyBillWave, color: '#16a34a' }
     if (m === 'CARD' || m === 'ONLINE') return { label: 'Cartão', icon: faCreditCard, color: '#2563eb' }
     return { label: m, icon: faCreditCard, color: '#64748b' }
@@ -218,9 +333,11 @@ const paymentDetails = computed(() => {
 const statusSteps = [
     { label: 'Recebido', icon: faClipboardCheck },
     { label: 'Confirmado', icon: faCheckCircle },
-    { label: 'Preparo', icon: faBoxOpen },
+    { label: 'Preparando', icon: faBoxOpen },
     { label: 'A Caminho', icon: faTruckFast },
-    { label: 'Entregue', icon: faHouseCircleCheck }
+    { label: 'Entregue', icon: faHouseCircleCheck },
+    { label: 'Concluído', icon: faCheckDouble }
+
 ]
 
 const currentStatusIndex = computed(() => {
@@ -234,6 +351,7 @@ const currentStatusIndex = computed(() => {
     if (s === 'EM_PREPARACAO') return 3
     if (s === 'SAIU_PARA_ENTREGA') return 4
     if (s === 'ENTREGUE') return 5
+    if (s === 'CONCLUÍDO') return 6
 
     return 1
 })
@@ -275,7 +393,7 @@ onMounted(() => {
                             <font-awesome-icon :icon="faChevronLeft" /> Meus Pedidos
                         </button>
                         <span class="meta-date">
-                            <font-awesome-icon :icon="faClock" /> Solicitado em {{ order.date }}
+                            <font-awesome-icon :icon="faClock" /> Solicitado em {{ order.requestDate }}
                         </span>
                     </div>
                     <div class="header-title-row">
@@ -340,7 +458,7 @@ onMounted(() => {
                                 </div>
                             </div>
                         </div>
-                        <div class="card info-card">
+                        <div class="card info-card address-card">
                             <div class="card-header compact">
                                 <div class="header-icon loc"><font-awesome-icon :icon="faLocationDot" /></div>
                                 <h2>Entrega</h2>
@@ -349,7 +467,7 @@ onMounted(() => {
                                 <p class="address-text">{{ order.delivery.address }}</p>
                                 <div class="delivery-badge-row">
                                     <span class="method-badge">
-                                        {{ order.delivery.method === 'delivery' ? 'Delivery' : 'Retirada' }}
+                                        {{ order.delivery.method === 'delivery' ? 'Entrega' : 'Retirada' }}
                                     </span>
                                 </div>
                                 <div v-if="order.delivery.method === 'delivery'" class="schedule-box">
@@ -378,6 +496,13 @@ onMounted(() => {
 
                     <aside class="sidebar-section">
                         <div class="sticky-wrapper">
+                            <div v-if="order.status !== 'CANCELADO' && order.status !== 'ENTREGUE' && order.status !== 'CONCLUIDO'"
+                                class="actions-card">
+                                <button class="btn-cancel" @click="handleCancelClick">
+                                    <font-awesome-icon :icon="faBan" />
+                                    Cancelar Pedido
+                                </button>
+                            </div>
 
                             <div class="card summary-card">
                                 <div class="card-header">
@@ -406,7 +531,7 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <div class="card">
+                            <div class="card info-card client-card">
                                 <div class="card-header compact">
                                     <div class="header-icon user"><font-awesome-icon :icon="faUserCircle" /></div>
                                     <h2>Cliente</h2>
@@ -428,14 +553,15 @@ onMounted(() => {
             </div>
         </div>
     </div>
+    <CancelOrderModal :is-open="showCancelModal" :is-loading="isCancelling" @close="showCancelModal = false"
+        @confirm="handleCancelOrder" />
+    <LateCancelModal :show="showLateCancelModal" @close="showLateCancelModal = false" />
 </template>
 
 <style scoped>
-/* --- Configurações Globais --- */
 .page-background {
     min-height: 100vh;
     background-color: #f8fafc;
-    /* Fundo cinza bem claro */
     font-family: 'Fredoka', 'Segoe UI', sans-serif;
     padding: 2rem 1rem;
     color: #334155;
@@ -446,7 +572,6 @@ onMounted(() => {
     margin: 0 auto;
 }
 
-/* Animações */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -473,7 +598,6 @@ onMounted(() => {
     }
 }
 
-/* --- Loading & Error --- */
 .state-container {
     display: flex;
     flex-direction: column;
@@ -522,7 +646,6 @@ onMounted(() => {
     transform: translateY(-2px);
 }
 
-/* --- Header --- */
 .order-header {
     margin-bottom: 2.5rem;
     animation: fadeInUp 0.4s ease-out;
@@ -580,7 +703,6 @@ onMounted(() => {
     color: #ec4899;
 }
 
-/* Status Badges */
 .status-badge {
     padding: 0.5rem 1.2rem;
     border-radius: 50px;
@@ -622,7 +744,6 @@ onMounted(() => {
     color: #b91c1c;
 }
 
-/* --- Stepper (Tracker) --- */
 .stepper-card {
     background: white;
     border-radius: 20px;
@@ -710,20 +831,19 @@ onMounted(() => {
 }
 
 .step-item.completed .step-icon-circle {
-    background: #3b82f6;
+    background: #be185d;
     color: white;
     border-color: #eff6ff;
 }
 
 .step-item.completed .step-label {
-    color: #3b82f6;
+    color: #be185d;
 }
 
 .info-card {
     margin-top: 2rem;
 }
 
-/* Cancelled Banner */
 .cancelled-banner {
     background: #fef2f2;
     border: 1px solid #fecaca;
@@ -752,17 +872,13 @@ onMounted(() => {
     opacity: 0.9;
 }
 
-/* --- Grid Layout Principal --- */
 .order-grid {
     display: grid;
-    /* Coluna Esquerda Flexível | Coluna Direita Fixa (350px) */
     grid-template-columns: 1fr 350px;
     gap: 1.5rem;
     align-items: start;
-    /* Importante para Sticky */
 }
 
-/* --- Cards Gerais --- */
 .card {
     background: white;
     border-radius: 16px;
@@ -839,7 +955,6 @@ onMounted(() => {
     font-size: 0.85rem;
 }
 
-/* --- Products --- */
 .products-list {
     display: flex;
     flex-direction: column;
@@ -905,7 +1020,6 @@ onMounted(() => {
     font-size: 1.05rem;
 }
 
-/* --- Sidebar Sticky --- */
 .sidebar-section {
     position: relative;
 }
@@ -919,7 +1033,6 @@ onMounted(() => {
     z-index: 10;
 }
 
-/* Summary */
 .summary-body {
     display: flex;
     flex-direction: column;
@@ -959,7 +1072,6 @@ onMounted(() => {
     align-items: center;
 }
 
-/* Info Cards */
 .info-body {
     font-size: 0.95rem;
     color: #475569;
@@ -1042,14 +1154,12 @@ onMounted(() => {
     color: #334155;
 }
 
-/* Pagamento Colorido */
 .mini-icon {
     font-size: 1.8rem;
     color: var(--accent);
     margin: 0.2rem 0;
 }
 
-/* Carrinho Image */
 .cart-img-wrap {
     height: 50px;
     display: flex;
@@ -1062,37 +1172,165 @@ onMounted(() => {
     max-width: 100%;
 }
 
-/* --- Responsividade --- */
 @media (max-width: 900px) {
+
     .order-grid {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        align-items: normal;
     }
 
+    .header-nav {
+        display: inline;
+    }
+
+    .meta-date {
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+
+    }
+
+    .sidebar-section,
     .sticky-wrapper {
-        position: static;
+        display: contents;
     }
 
-    .stepper-track {
-        overflow-x: scroll;
-        padding-bottom: 1rem;
-        justify-content: flex-start;
-        gap: 2rem;
+    .sidebar-section .card,
+    .sticky-wrapper .card {
+        width: 100%;
+        box-sizing: border-box;
     }
 
-    .progress-bar-bg,
-    .progress-bar-fill {
-        display: none;
+    .summary-card {
+        order: 1;
     }
 
-    /* Remove barra conectora no mobile */
+    .products-section {
+        order: 2;
+    }
+
+    .client-card {
+        order: 3;
+    }
+
+    .address-card {
+        order: 4;
+    }
+
+    .mini-grid {
+        order: 5;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
     .header-title-row {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
 
-    .mini-grid {
-        grid-template-columns: 1fr 1fr;
+    .sticky-wrapper {
+        position: static;
     }
+
+    .stepper-card {
+        padding: 1.5rem 1rem;
+    }
+
+    .stepper-track {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0;
+        position: relative;
+        overflow-x: auto;
+        padding: 15px 5px 1rem 5px;
+    }
+
+    .progress-bar-bg {
+        top: 33px;
+        display: block;
+        width: 100%;
+    }
+
+    .progress-bar-fill {
+        top: 33px;
+        display: block;
+    }
+
+    .step-item {
+        width: auto;
+        flex: 1;
+        min-width: 60px;
+    }
+
+    .step-icon-circle {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+        margin: 0 auto;
+        z-index: 2;
+        position: relative;
+        background-color: white;
+        overflow: visible;
+    }
+
+    .step-label {
+        font-size: 0.7rem;
+        margin-top: 0.5rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        padding: 0 2px;
+    }
+
+    .step-item.active .step-icon-circle {
+        overflow: visible;
+    }
+}
+
+.actions-card {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.btn-cancel {
+    width: 100%;
+    padding: 1rem;
+    background-color: white;
+    border: 2px solid #fee2e2;
+    color: #ef4444;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    font-family: inherit;
+    transition: all 0.4s ease;
+
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background-color: #fee2e2;
+    border-color: #ef4444;
+}
+
+.btn-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+    border-color: #e2e8f0;
+    color: #94a3b8;
+}
+
+.cancel-note {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 0.5rem;
 }
 </style>

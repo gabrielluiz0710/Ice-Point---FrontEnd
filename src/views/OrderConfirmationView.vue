@@ -149,9 +149,9 @@ onMounted(() => {
                                 <template v-else>
                                     <p>{{ receipt.deliveryAddress.street }}, {{ receipt.deliveryAddress.number }}</p>
                                     <p v-if="receipt.deliveryAddress.complement">{{ receipt.deliveryAddress.complement
-                                    }}</p>
+                                        }}</p>
                                     <p>{{ receipt.deliveryAddress.neighborhood }} - {{ receipt.deliveryAddress.city
-                                    }}/{{ receipt.deliveryAddress.state }}</p>
+                                        }}/{{ receipt.deliveryAddress.state }}</p>
                                 </template>
                             </div>
                         </template>
@@ -323,6 +323,7 @@ onMounted(() => {
     stroke: #fff;
     stroke-miterlimit: 10;
     margin: 0 auto;
+    overflow: visible;
 }
 
 .checkmark-circle {

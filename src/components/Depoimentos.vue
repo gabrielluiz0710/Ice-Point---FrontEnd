@@ -10,8 +10,8 @@ import 'swiper/css/navigation';
 import 'swiper/css/effect-coverflow';
 
 const GOOGLE_PLACE_ID = "ChIJtZbKt4HPupQRNvCfvu4DthI";
+const GOOGLE_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${GOOGLE_PLACE_ID}`;
 const GOOGLE_WRITE_REVIEW_URL = `https://search.google.com/local/writereview?placeid=${GOOGLE_PLACE_ID}`;
-const GOOGLE_MAPS_URL = `https://www.google.com/maps/place/?q=place_id:${GOOGLE_PLACE_ID}`;
 
 interface Review {
     author_name: string;
@@ -28,8 +28,8 @@ const totalReviews = ref(0);
 const isLoading = ref(true);
 const modules = [Autoplay, Pagination, EffectCoverflow, Navigation];
 
-const openSpecificReview = (url?: string) => {
-    const target = url || GOOGLE_MAPS_URL;
+const openSpecificReview = (authorUrl?: string) => {
+    const target = authorUrl || GOOGLE_MAPS_URL;
     window.open(target, '_blank');
 };
 

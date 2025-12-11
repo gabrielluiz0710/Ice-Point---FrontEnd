@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { supabase } from '@/service/supabase'
 import { faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
-import { faCheckCircle } from '@fortawesome/free-solid-svg-icons'
+import { faCheckCircle, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 
@@ -29,6 +29,9 @@ const forgotEmail = ref('')
 const forgotLoading = ref(false)
 const forgotMsg = ref('')
 const forgotType = ref<'success' | 'error' | ''>('')
+
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -287,15 +290,13 @@ onMounted(() => {
 
     const hash = window.location.hash
 
-    // Detecta o "erro" que na verdade é sucesso de verificação
     if (hash && hash.includes('error_code=otp_expired')) {
-        router.replace('/login') // Limpa a URL
-        isLoginMode.value = true // Garante que está na aba de Login
-        showSuccessModal.value = true // Exibe o modal bonitinho
+        router.replace('/login')
+        isLoginMode.value = true
+        showSuccessModal.value = true
         return
     }
 
-    // Erros genéricos
     if (hash && hash.includes('error_description')) {
         const params = new URLSearchParams(hash.substring(1))
         const description = params.get('error_description')?.replace(/\+/g, ' ')
@@ -349,14 +350,27 @@ onMounted(() => {
 
                 <div class="input-group">
                     <label for="password">Senha</label>
-                    <input id="password" type="password" v-model="password" required placeholder="••••••••" />
+                    <div class="password-wrapper">
+                        <input id="password" :type="showPassword ? 'text' : 'password'" v-model="password" required
+                            placeholder="••••••••" />
+                        <button type="button" class="toggle-btn" @click="showPassword = !showPassword" tabindex="-1">
+                            <font-awesome-icon :icon="showPassword ? faEyeSlash : faEye" />
+                        </button>
+                    </div>
                 </div>
 
                 <transition name="fade">
                     <div v-if="!isLoginMode" class="input-group">
                         <label for="confirmPassword">Confirmar Senha</label>
-                        <input id="confirmPassword" type="password" v-model="confirmPassword" placeholder="••••••••"
-                            :class="{ 'error-border': !passwordsMatch && confirmPassword }" />
+                        <div class="password-wrapper">
+                            <input id="confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
+                                v-model="confirmPassword" placeholder="••••••••"
+                                :class="{ 'error-border': !passwordsMatch && confirmPassword }" />
+                            <button type="button" class="toggle-btn" @click="showConfirmPassword = !showConfirmPassword"
+                                tabindex="-1">
+                                <font-awesome-icon :icon="showConfirmPassword ? faEyeSlash : faEye" />
+                            </button>
+                        </div>
                     </div>
                 </transition>
 
@@ -537,6 +551,35 @@ onMounted(() => {
 .input-group input.error-border {
     border-color: var(--c-rosa);
     background-color: #fff5f6;
+}
+
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-btn {
+    position: absolute;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #aab4be;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.toggle-btn:hover {
+    color: var(--c-azul);
+}
+
+.password-wrapper input {
+    padding-right: 40px;
 }
 
 .row-group {

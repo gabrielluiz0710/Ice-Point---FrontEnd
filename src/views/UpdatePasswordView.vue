@@ -2,12 +2,15 @@
 import { ref, onMounted } from 'vue'
 import { supabase } from '@/service/supabase'
 import router from '@/router'
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 
 const password = ref('')
 const confirmPassword = ref('')
 const isLoading = ref(false)
 const feedbackMsg = ref('')
 const feedbackType = ref<'success' | 'error' | ''>('')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const translateSupabaseError = (msg: string) => {
     const errorLower = msg.toLowerCase()
@@ -80,12 +83,26 @@ const handleUpdate = async () => {
 
                 <div class="input-group">
                     <label for="pass">Nova Senha</label>
-                    <input id="pass" type="password" v-model="password" required placeholder="••••••••" />
+                    <div class="password-wrapper">
+                        <input id="pass" :type="showPassword ? 'text' : 'password'" v-model="password" required
+                            placeholder="••••••••" />
+
+                        <button type="button" class="toggle-btn" @click="showPassword = !showPassword" tabindex="-1">
+                            <font-awesome-icon :icon="showPassword ? faEyeSlash : faEye" />
+                        </button>
+                    </div>
                 </div>
 
                 <div class="input-group">
-                    <label for="confPass">Confirmar Senha</label>
-                    <input id="confPass" type="password" v-model="confirmPassword" required placeholder="••••••••" />
+                    <div class="password-wrapper">
+                        <label for="confPass">Confirmar Senha</label>
+                        <input id="confPass" :type="showConfirmPassword ? 'text' : 'password'" v-model="confirmPassword"
+                            required placeholder="••••••••" />
+                        <button type="button" class="toggle-btn" @click="showConfirmPassword = !showConfirmPassword"
+                            tabindex="-1">
+                            <font-awesome-icon :icon="showConfirmPassword ? faEyeSlash : faEye" />
+                        </button>
+                    </div>
                 </div>
 
                 <button type="submit" :disabled="isLoading" class="btn-primary">
@@ -183,6 +200,35 @@ const handleUpdate = async () => {
     background-color: #fff;
     border-color: var(--c-azul);
     box-shadow: 0 4px 12px rgba(25, 197, 203, 0.15);
+}
+
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-btn {
+    position: absolute;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #aab4be;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.toggle-btn:hover {
+    color: var(--c-azul);
+}
+
+.password-wrapper input {
+    padding-right: 40px;
 }
 
 .btn-primary {
