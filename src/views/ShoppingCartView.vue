@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import type { Ref } from 'vue'
 import ProductCard from '@/components/shopping-cart/ProductCard.vue'
 import OrderSummary from '@/components/shopping-cart/OrderSummary.vue'
@@ -12,7 +12,9 @@ import {
     faSearch,
     faFilter,
     faSortAmountDown,
-    faSortAmountUp
+    faSortAmountUp,
+    faIceCream,
+    faTimes
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useCartStore, type DBProduct } from '@/stores/cart'
@@ -136,6 +138,81 @@ const checkoutSteps = [
 ]
 const currentCheckoutStep = 1
 
+const isMobileCartExpanded = ref(false);
+const isBumping = ref(false);
+
+watch(() => cartStore.totalCartQuantity, (newVal, oldVal) => {
+    if (newVal !== oldVal) {
+        isBumping.value = true;
+        setTimeout(() => {
+            isBumping.value = false;
+        }, 300);
+    }
+});
+
+const isFloatingClosed = ref(false);
+const floatingEl = ref<HTMLElement | null>(null);
+const isDragging = ref(false);
+const position = ref({ x: 0, y: 0 });
+const dragOffset = ref({ x: 0, y: 0 });
+
+const floatingStyle = computed(() => {
+    if (position.value.x === 0 && position.value.y === 0) return {};
+    return {
+        left: `${position.value.x}px`,
+        top: `${position.value.y}px`,
+        bottom: 'auto',
+        right: 'auto',
+        transform: 'none'
+    };
+});
+
+function startDrag(event: MouseEvent | TouchEvent) {
+    if (!floatingEl.value) return;
+
+    isDragging.value = true;
+
+    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+
+    const rect = floatingEl.value.getBoundingClientRect();
+
+    if (position.value.x === 0 && position.value.y === 0) {
+        position.value = { x: rect.left, y: rect.top };
+    }
+
+    dragOffset.value = {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+
+    window.addEventListener('mousemove', onDrag);
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('touchmove', onDrag, { passive: false });
+    window.addEventListener('touchend', stopDrag);
+}
+
+function onDrag(event: MouseEvent | TouchEvent) {
+    if (!isDragging.value) return;
+    if (event.cancelable) event.preventDefault();
+
+    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+
+    position.value = {
+        x: clientX - dragOffset.value.x,
+        y: clientY - dragOffset.value.y
+    };
+}
+
+function stopDrag() {
+    isDragging.value = false;
+    window.removeEventListener('mousemove', onDrag);
+    window.removeEventListener('mouseup', stopDrag);
+    window.removeEventListener('touchmove', onDrag);
+    window.removeEventListener('touchend', stopDrag);
+}
+
 onMounted(() => {
     window.scrollTo(0, 0);
 });
@@ -209,7 +286,31 @@ onMounted(() => {
         </div>
 
         <MobileCartBar :cart-items="cartStore.cartItems" :total="cartStore.totalCartPrice"
-            @empty-cart="cartStore.emptyCart" @checkout="handleCheckout" />
+            @empty-cart="cartStore.emptyCart" @checkout="handleCheckout"
+            @expand-change="(val) => isMobileCartExpanded = val" />
+
+        <transition name="pop">
+            <div v-show="cartStore.totalCartQuantity > 0 && !isMobileCartExpanded && !isFloatingClosed" ref="floatingEl"
+                class="floating-counter" :class="{ 'bump': isBumping, 'is-dragging': isDragging }"
+                :style="floatingStyle" @mousedown="startDrag" @touchstart="startDrag">
+                <button class="btn-close-floating" @click.stop="isFloatingClosed = true" @mousedown.stop
+                    @touchstart.stop>
+                    <FontAwesomeIcon :icon="faTimes" />
+                </button>
+
+                <div class="icon-wrapper">
+                    <FontAwesomeIcon :icon="faIceCream" />
+                </div>
+
+                <div class="text-wrapper">
+                    <span class="label">Total escolhido</span>
+                    <span class="value">
+                        {{ cartStore.totalCartQuantity }}
+                        <small>unid.</small>
+                    </span>
+                </div>
+            </div>
+        </transition>
     </div>
 
     <Teleport to="body">
@@ -473,6 +574,157 @@ onMounted(() => {
 
     .shopping-cart-view {
         padding: 1.5rem 1rem 8rem;
+    }
+}
+
+.floating-counter {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    /* Posição inicial padrão */
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 10px 20px 10px 10px;
+    border-radius: 50px;
+    box-shadow:
+        0 10px 25px -5px rgba(var(--c-azul-rgb), 0.3),
+        0 8px 10px -6px rgba(var(--c-azul-rgb), 0.1);
+    border: 2px solid white;
+
+    /* Alterações para o Drag */
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: grab;
+    /* Mãozinha aberta */
+    touch-action: none;
+    /* Impede scroll do browser ao tocar no elemento */
+    user-select: none;
+}
+
+/* Quando estiver arrastando, muda o cursor e REMOVE a transição para ser instantâneo */
+.floating-counter.is-dragging {
+    cursor: grabbing;
+    /* Mãozinha fechada */
+    transition: none !important;
+    box-shadow: 0 15px 30px -5px rgba(var(--c-azul-rgb), 0.4);
+    /* Sombra maior ao levantar */
+    z-index: 1000;
+}
+
+/* Estilo do Botão de Fechar */
+.btn-close-floating {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    background: var(--c-rosa);
+    /* Usando a cor rosa do seu tema */
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+    z-index: 10;
+}
+
+.btn-close-floating:hover {
+    transform: scale(1.1);
+    background: var(--c-rosa-dark);
+}
+
+.icon-wrapper {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, var(--c-azul), var(--c-azul-light));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 10px rgba(var(--c-azul-rgb), 0.3);
+}
+
+.text-wrapper {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.text-wrapper .label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.text-wrapper .value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--c-azul);
+    font-family: 'Fredoka', sans-serif;
+}
+
+.text-wrapper .value small {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #aaa;
+}
+
+.bump {
+    animation: bump 0.3s ease-out;
+}
+
+@keyframes bump {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.pop-enter-active,
+.pop-leave-active {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pop-enter-from,
+.pop-leave-to {
+    opacity: 0;
+    transform: scale(0.5) translateY(20px);
+}
+
+@media (max-width: 1024px) {
+    .floating-counter {
+        bottom: 120px;
+        left: 1rem;
+        padding: 8px 16px 8px 8px;
+    }
+
+    .icon-wrapper {
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+    }
+
+    .text-wrapper .value {
+        font-size: 1.2rem;
     }
 }
 </style>

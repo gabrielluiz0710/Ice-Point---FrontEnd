@@ -419,7 +419,7 @@ async function processOnlinePayment(orderId: number) {
     display: inline-block;
     width: 24px;
     height: 24px;
-    background-color: var(--c-text-light);
+    background-color: var(--c-branco);
     border: 2px solid var(--color-border);
     border-radius: 6px;
     margin-right: 0.75rem;

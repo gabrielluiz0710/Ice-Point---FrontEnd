@@ -30,7 +30,7 @@ const emit = defineEmits(['completed'])
 const isCepLoading = ref(false)
 const cepInputRef = ref<HTMLInputElement | null>(null);
 const selectedAddressId = ref<number | null>(null);
-
+let cepAbortController: AbortController | null = null;
 const showCepNotFoundErrorModal = ref(false);
 const showCityErrorModal = ref(false);
 
@@ -131,6 +131,36 @@ function selectDeliveryMethod(method: 'delivery' | 'pickup') {
 
     if (method === 'pickup') {
         selectedAddressId.value = null;
+        checkoutStore.calculatedDeliveryFee = 0;
+    } else {
+        if (values.cep && values.number) {
+            handleAddressChange();
+        } else {
+            checkoutStore.calculatedDeliveryFee = null;
+        }
+    }
+}
+
+function updateStoreAddress() {
+    checkoutStore.address = {
+        cep: values.cep || '',
+        street: values.street || '',
+        number: values.number || '',
+        complement: values.complement || '',
+        neighborhood: values.neighborhood || '',
+        city: values.city || '',
+        state: values.state || '',
+    };
+}
+
+async function handleAddressChange() {
+    if (isCepLoading.value) return;
+
+    if (values.deliveryMethod === 'delivery' && values.cep && values.number) {
+        updateStoreAddress();
+        await checkoutStore.calculateShipping();
+    } else {
+        checkoutStore.calculatedDeliveryFee = null;
     }
 }
 
@@ -143,12 +173,32 @@ function selectSavedAddress(addr: any) {
     setFieldValue('neighborhood', addr.neighborhood);
     setFieldValue('city', addr.city);
     setFieldValue('state', addr.state);
+
+    checkoutStore.address = {
+        cep: addr.zip,
+        street: addr.street,
+        number: addr.number,
+        complement: addr.complement,
+        neighborhood: addr.neighborhood,
+        city: addr.city,
+        state: addr.state
+    };
+
+    checkoutStore.calculateShipping();
 }
 
 async function handleCepLookup(cepValue: string) {
     const cep = cepValue?.replace(/\D/g, '') || '';
 
+    checkoutStore.calculatedDeliveryFee = null;
+
     if (cep.length !== 8) return;
+
+    if (cepAbortController) {
+        cepAbortController.abort();
+    }
+
+    cepAbortController = new AbortController();
 
     selectedAddressId.value = null;
     isCepLoading.value = true;
@@ -156,7 +206,9 @@ async function handleCepLookup(cepValue: string) {
     ['street', 'neighborhood', 'city', 'state'].forEach(field => setFieldValue(field as any, ''));
 
     try {
-        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+            signal: cepAbortController.signal
+        });
         const data = await response.json();
 
         if (data.erro) {
@@ -176,12 +228,23 @@ async function handleCepLookup(cepValue: string) {
         setFieldValue('state', data.uf);
 
         await nextTick();
-        document.getElementById('number')?.focus();
 
-    } catch (error) {
+        if (values.number) {
+            handleAddressChange();
+        } else {
+            document.getElementById('number')?.focus();
+        }
+
+    } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.log('Requisição de CEP cancelada pois uma nova foi iniciada.');
+            return;
+        }
         console.error(error);
     } finally {
-        isCepLoading.value = false;
+        if (cepAbortController && !cepAbortController.signal.aborted) {
+            isCepLoading.value = false;
+        }
     }
 }
 
@@ -229,15 +292,7 @@ const onSubmit = handleSubmit((formValues) => {
     checkoutStore.deliveryMethod = formValues.deliveryMethod as 'delivery' | 'pickup';
 
     if (formValues.deliveryMethod === 'delivery') {
-        checkoutStore.address = {
-            cep: formValues.cep,
-            street: formValues.street,
-            number: formValues.number,
-            complement: formValues.complement,
-            neighborhood: formValues.neighborhood,
-            city: formValues.city,
-            state: formValues.state,
-        };
+        updateStoreAddress();
         checkoutStore.deliveryAddress = { cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' };
         checkoutStore.useSameAddressForDelivery = true;
     } else {
@@ -305,6 +360,10 @@ onMounted(async () => {
             if (match) {
                 selectedAddressId.value = match.id ?? null;
             }
+
+            if (checkoutStore.deliveryMethod === 'delivery') {
+                checkoutStore.calculateShipping();
+            }
         } else {
             const principal = savedAddresses.value.find(a => a.principal);
             if (principal) {
@@ -312,7 +371,10 @@ onMounted(async () => {
             }
         }
     } else {
-        if (!hasStoreData) {
+        if (hasStoreData && checkoutStore.deliveryMethod === 'delivery') {
+            checkoutStore.calculateShipping();
+        } else if (!hasStoreData) {
+            checkoutStore.calculatedDeliveryFee = null;
             cepInputRef.value?.focus();
         }
     }
@@ -381,13 +443,8 @@ const addressFormFields = [
         <Transition name="fade-step">
             <div v-if="values.deliveryMethod === 'delivery'">
 
-                <div class="info-box delivery" style="margin-bottom: 1.5rem;">
-                    <font-awesome-icon :icon="faTruck" />
-                    <p>Uma taxa de entrega fixa de <strong>R$ 20,00</strong> será adicionada ao seu pedido.</p>
-                </div>
-
                 <div v-if="savedAddresses.length > 0" class="saved-addresses-section">
-                    <h3 class="section-subtitle-endereco">Meus Endereços</h3>
+                    <h3 class="section-subtitle">Meus Endereços</h3>
                     <div class="address-cards-grid">
                         <div v-for="addr in savedAddresses" :key="addr.id" class="address-card"
                             :class="{ active: selectedAddressId === addr.id }" @click="selectSavedAddress(addr)">
@@ -419,8 +476,9 @@ const addressFormFields = [
                                     <input :ref="fieldData.name === 'cep' ? setCepInputRef : undefined"
                                         v-bind="veeField" :id="fieldData.name" :placeholder="fieldData.placeholder"
                                         :type="fieldData.type" :readonly="fieldData.readonly"
-                                        @input="handleInput($event, fieldData.mask, veeField.onChange)"
-                                        @blur="fieldData.name === 'cep' ? handleCepLookup(veeField.value) : null"
+                                        @input="handleInput($event, fieldData.mask, veeField.onChange)" @blur="
+                                            fieldData.name === 'cep' ? handleCepLookup(veeField.value) :
+                                                fieldData.name === 'number' ? handleAddressChange() : null"
                                         :disabled="(isCepLoading && fieldData.name !== 'cep')" />
                                 </Field>
                             </div>
@@ -428,6 +486,25 @@ const addressFormFields = [
                         </div>
                     </div>
                 </fieldset>
+                <div class="info-box delivery" style="margin-bottom: 1.5rem;">
+                    <font-awesome-icon :icon="faTruck" />
+
+                    <div v-if="checkoutStore.isCalculatingFee" class="calculating-fee">
+                        <font-awesome-icon :icon="faSpinner" spin />
+                        <span>Calculando taxa de entrega...</span>
+                    </div>
+
+                    <p v-else-if="checkoutStore.calculatedDeliveryFee !== null">
+                        Uma taxa de entrega de <strong>{{ checkoutStore.deliveryFee.toLocaleString('pt-BR', {
+                            style:
+                                'currency', currency: 'BRL'
+                        }) }}</strong> será adicionada ao seu pedido.
+                    </p>
+
+                    <p v-else class="waiting-info-text">
+                        Preencha o <strong>CEP</strong> e o <strong>Número</strong> para calcular o frete.
+                    </p>
+                </div>
             </div>
         </Transition>
 
@@ -467,10 +544,10 @@ const addressFormFields = [
         </Transition>
 
         <button type="submit" class="action-button"
-            :disabled="!meta.valid || isCepLoading || !checkoutStore.isCartSelectionComplete">
-
+            :disabled="!meta.valid || isCepLoading || checkoutStore.isCalculatingFee || !checkoutStore.isCartSelectionComplete">
             <span v-if="isCepLoading">Buscando CEP...</span>
             <span v-else-if="!values.deliveryMethod">Escolha o método de entrega</span>
+            <span v-else-if="checkoutStore.isCalculatingFee">Calculando Frete...</span>
             <span v-else-if="!values.scheduleDate">Escolha a Data</span>
             <span v-else-if="!checkoutStore.isCartSelectionComplete">Selecione os Carrinhos</span>
             <span v-else>Ir para Pagamento</span>
@@ -936,5 +1013,19 @@ const addressFormFields = [
 .fade-step-leave-to {
     opacity: 0;
     transform: translateY(10px);
+}
+
+.calculating-fee {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    color: #666;
+}
+
+.waiting-info-text {
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
 }
 </style>

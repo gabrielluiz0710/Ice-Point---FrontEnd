@@ -20,7 +20,7 @@ defineProps<{
 
 const isExpanded = ref(false)
 
-const emit = defineEmits(['empty-cart', 'checkout'])
+const emit = defineEmits(['empty-cart', 'checkout', 'expand-change'])
 const showConfirmation = ref(false)
 
 watch(showConfirmation, (isShowing) => {
@@ -29,6 +29,10 @@ watch(showConfirmation, (isShowing) => {
     } else {
         document.body.classList.remove('modal-open')
     }
+})
+
+watch(isExpanded, (newValue) => {
+    emit('expand-change', newValue)
 })
 
 function confirmEmptyCart() {
@@ -52,10 +56,11 @@ function goToCheckout() {
                 <div class="total-info">
                     <div class="price-details">
                         <span class="item-count">{{ cartItems.length }} {{ cartItems.length === 1 ? 'item' : 'itens'
-                            }}</span>
+                        }}</span>
                         <span class="total-price">R$ {{ total.toFixed(2) }}</span>
                     </div>
-                    <button class="toggle-button" aria-label="Ver carrinho" @click.stop> Ver Carrinho
+                    <button class="toggle-button" aria-label="Ver carrinho"> Ver
+                        Carrinho
                         <font-awesome-icon :icon="faChevronUp" class="arrow-icon" />
                     </button>
                 </div>

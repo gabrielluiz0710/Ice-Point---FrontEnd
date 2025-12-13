@@ -79,6 +79,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
   const isCepLoading = ref(false)
   const selectedCarts = ref<SelectedCart[]>([])
   const showDeliveryFee = computed(() => deliveryMethod.value === 'delivery')
+  const calculatedDeliveryFee = ref<number | null>(null)
+  const isCalculatingFee = ref(false)
 
   const showDiscount = computed(() => {
     if (paymentMode.value === 'online') return false
@@ -90,7 +92,10 @@ export const useCheckoutStore = defineStore('checkout', () => {
     () => addressSchema.isValidSync(address.value) && schedule.value.date && schedule.value.time,
   )
 
-  const deliveryFee = computed(() => (showDeliveryFee.value ? 20 : 0))
+  const deliveryFee = computed(() => {
+    if (!showDeliveryFee.value) return 0
+    return calculatedDeliveryFee.value !== null ? calculatedDeliveryFee.value : 20
+  })
   const discount = computed(() => (showDiscount.value ? cartStore.totalCartPrice * 0.1 : 0))
   const grandTotal = computed(() => cartStore.totalCartPrice + deliveryFee.value - discount.value)
 
@@ -114,6 +119,52 @@ export const useCheckoutStore = defineStore('checkout', () => {
       isCepLoading.value = false
     }
   }
+
+  async function calculateShipping() {
+    // Só calcula se tiver os dados mínimos
+    if (!address.value.cep || !address.value.number || !address.value.street) return
+
+    isCalculatingFee.value = true
+
+    try {
+      const payload = {
+        cep: address.value.cep,
+        street: address.value.street,
+        number: address.value.number,
+        city: address.value.city,
+        state: address.value.state,
+      }
+
+      const response = await fetch(`${API_URL}/shipping/calculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        calculatedDeliveryFee.value = data.fee
+        console.log(`Distância: ${data.distance}, Frete: R$ ${data.fee}`)
+      } else {
+        // Se der erro, assume o padrão de 20 ou exibe erro
+        console.error('Erro ao calcular frete')
+        calculatedDeliveryFee.value = 20
+      }
+    } catch (error) {
+      console.error(error)
+      calculatedDeliveryFee.value = 20 // Fallback
+    } finally {
+      isCalculatingFee.value = false
+    }
+  }
+
+  // Lembre de resetar o frete se mudar o método para pickup
+  watch(deliveryMethod, (newMethod) => {
+    paymentMethod.value = 'pix'
+    if (newMethod === 'pickup') {
+      calculatedDeliveryFee.value = 0
+    }
+  })
 
   watch(deliveryMethod, () => {
     paymentMethod.value = 'pix'
@@ -332,5 +383,8 @@ export const useCheckoutStore = defineStore('checkout', () => {
     paymentMode,
     submitOrder,
     loadFromStorage,
+    calculatedDeliveryFee,
+    isCalculatingFee,
+    calculateShipping,
   }
 })
