@@ -506,6 +506,10 @@ const isActive = (path: string, exact: boolean = false) => {
 }
 
 @media (max-width: 768px) {
+    .page-view {
+        padding: 1rem;
+    }
+
     .admin-sidebar {
         position: fixed;
         height: 100%;

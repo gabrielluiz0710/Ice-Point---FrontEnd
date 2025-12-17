@@ -24,6 +24,8 @@ import AdminDashboard from '../views/admin/DashboardView.vue'
 import AdminProductsView from '../views/admin/ProductsView.vue'
 import AdminUsersView from '../views/admin/UsersView.vue'
 import { useCartStore } from '@/stores/cart'
+import AdminOrdersCalendar from '../views/admin/OrdersCalendarView.vue'
+import AdminOrderDetailView from '../views/admin/AdminOrderDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -139,6 +141,17 @@ const router = createRouter({
           name: 'admin-usuarios',
           component: AdminUsersView,
           meta: { roles: ['ADMIN'] },
+        },
+        {
+          path: 'encomendas',
+          name: 'admin-encomendas',
+          component: AdminOrdersCalendar,
+        },
+        {
+          path: 'encomendas/:id',
+          name: 'admin-encomenda-detalhe',
+          component: AdminOrderDetailView,
+          props: true,
         },
       ],
     },
