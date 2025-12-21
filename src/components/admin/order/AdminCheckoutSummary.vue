@@ -74,7 +74,6 @@ const formatMoney = (val: number) =>
     display: flex;
     flex-direction: column;
     height: calc(100vh - 120px);
-    /* Ajuste conforme altura do header */
     position: sticky;
     top: 1rem;
 }
