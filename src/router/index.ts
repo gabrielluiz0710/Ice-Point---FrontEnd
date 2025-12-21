@@ -227,6 +227,9 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.roles) {
     const allowedRoles = to.meta.roles as string[]
     if (!allowedRoles.includes(userRole || '')) {
+      if (userRole === 'FUNCIONARIO' && to.name === 'admin-dashboard') {
+        return next({ name: 'admin-encomendas' })
+      }
       console.warn(`[Router] Usuário ${userRole} tentou acessar área restrita.`)
       return next({
         name: 'not-found',
