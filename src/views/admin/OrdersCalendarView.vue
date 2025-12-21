@@ -179,6 +179,7 @@ const goToDetails = (orderId: number) => {
 }
 
 onMounted(() => {
+    window.scrollTo(0, 0);
     fetchEncomendas();
     window.addEventListener('resize', checkScreenSize);
 });
@@ -193,6 +194,9 @@ onMounted(() => {
             </div>
 
             <div class="header-controls">
+                <button @click="$router.push({ name: 'admin-criar-encomenda' })" class="btn-new-order">
+                    + Novo Pedido
+                </button>
                 <button class="btn-today" @click="resetToToday" :disabled="weekOffset === 0">
                     <font-awesome-icon :icon="faCalendarDay" /> Hoje
                 </button>
@@ -507,6 +511,7 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    width: 100%;
 }
 
 .client-name {
@@ -607,6 +612,34 @@ onMounted(() => {
     font-weight: 600;
 }
 
+.btn-new-order {
+    background: linear-gradient(135deg, var(--c-azul, #3b82f6), var(--c-azul-dark, #1e3a8a));
+    color: white;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    font-family: var(--font-title, sans-serif);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+}
+
+.btn-new-order:hover {
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-new-order:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
 @media (max-width: 768px) {
     .calendar-container {
         gap: 0.5rem;
@@ -634,6 +667,7 @@ onMounted(() => {
     }
 
     .btn-today {
+        order: 2;
         flex: 1;
         justify-content: center;
     }
@@ -763,6 +797,27 @@ onMounted(() => {
     .time-text {
         font-size: 1rem;
         color: #334155;
+    }
+
+    .header-controls {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        justify-content: space-between;
+    }
+
+    .btn-new-order {
+        width: 100%;
+        order: 1;
+        justify-content: center;
+        margin-top: 0;
+        padding: 0.8rem;
+    }
+
+    .nav-buttons {
+        order: 3;
+        flex: 0 0 auto;
     }
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user' // Usando a store existente
+import { useUserStore } from '@/stores/user'
 import {
     faBoxOpen,
     faClipboardCheck,
@@ -21,19 +21,20 @@ import {
     faCheckCircle,
     faCheckDouble,
     faClock,
-    faUserShield // Ícone de Admin
+    faUserShield,
+    faSave
 } from '@fortawesome/free-solid-svg-icons'
 import { faPix } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import CancelOrderModal from '@/components/orders/CancelOrderModal.vue'
+import { useToast } from '@/stores/useToast'
+import ToastContainer from '@/components/ui/ToastContainer.vue'
 
-// --- Configurações ---
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const API_URL = import.meta.env.VITE_API_URL
 
-// Imagens estáticas (mesma lógica)
 const cartImages: Record<string, string> = {
     'azul': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/azul.webp',
     'rosa': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/rosa.webp',
@@ -42,13 +43,12 @@ const cartImages: Record<string, string> = {
     'default': 'https://db.icepoint.com.br/storage/v1/object/public/images/carrinhos/misto.webp'
 }
 
-// --- Tipagem ---
 interface OrderItem {
     id: number; name: string; quantity: number; price: number; image: string;
 }
 
 interface Order {
-    id: string; status: string; displayStatus: string; date: string; requestDate: string; time: string;
+    id: string; status: string; paymentStatus: string; displayStatus: string; date: string; requestDate: string; time: string;
     customer: { name: string; email: string; phone: string; };
     delivery: { method: 'delivery' | 'pickup'; address: string; };
     payment: { method: string; };
@@ -58,13 +58,30 @@ interface Order {
     rawDeliveryDate: Date;
 }
 
-// --- Estado ---
+const { addToast } = useToast()
 const order = ref<Order | null>(null)
 const isLoading = ref(true)
 const showCancelModal = ref(false)
 const isCancelling = ref(false)
+const isUpdatingStatus = ref(false)
+const selectedNewStatus = ref('')
+const isUpdatingPayment = ref(false)
+const selectedPaymentStatus = ref('')
 
-// --- Helpers ---
+const paymentStatuses = [
+    { value: 'PENDENTE', label: 'Pendente' },
+    { value: 'PAGO', label: 'Pago' }
+]
+
+const availableStatuses = [
+    { value: 'PENDENTE', label: 'Pendente' },
+    { value: 'CONFIRMADO', label: 'Confirmado' },
+    { value: 'EM_PREPARACAO', label: 'Em Preparação' },
+    { value: 'SAIU_PARA_ENTREGA', label: 'Saiu para Entrega' },
+    { value: 'ENTREGUE', label: 'Entregue' },
+    { value: 'CONCLUIDO', label: 'Concluído' }
+]
+
 const goBack = () => router.push({ name: 'admin-encomendas' })
 
 const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
@@ -89,7 +106,6 @@ const getDisplayStatus = (status: string) => {
     return map[status] || status
 }
 
-// --- Fetch Admin ---
 const fetchOrderDetails = async (orderId: string) => {
     isLoading.value = true
     try {
@@ -97,7 +113,6 @@ const fetchOrderDetails = async (orderId: string) => {
         const token = session?.access_token
         if (!token) return router.push('/login')
 
-        // ROTA DIFERENTE AQUI (Rota de Admin que criamos)
         const response = await fetch(`${API_URL}/encomendas/detalhes/${orderId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -108,7 +123,6 @@ const fetchOrderDetails = async (orderId: string) => {
         if (!response.ok) throw new Error('Erro ao buscar detalhes')
         const data = await response.json()
 
-        // Mapeamento (Igual ao do cliente)
         let rawCartColor = data.carrinhos?.[0]?.cor || 'Misto'
         const datePart = data.dataAgendada || data.dataSolicitacao.split('T')[0]
         const timePart = data.horaAgendada || '00:00:00'
@@ -118,6 +132,7 @@ const fetchOrderDetails = async (orderId: string) => {
         order.value = {
             id: String(data.id),
             status: data.status,
+            paymentStatus: data.statusPagamento,
             displayStatus: getDisplayStatus(data.status),
             date: formatDate(datePart),
             requestDate: formatIsoDate(data.dataSolicitacao),
@@ -151,6 +166,10 @@ const fetchOrderDetails = async (orderId: string) => {
                 image: i.produto.imagemCapa || '/images/placeholder.png'
             }))
         }
+        if (order.value) {
+            selectedNewStatus.value = data.status
+            selectedPaymentStatus.value = data.statusPagamento
+        }
     } catch (error) {
         console.error(error)
         order.value = null
@@ -159,7 +178,67 @@ const fetchOrderDetails = async (orderId: string) => {
     }
 }
 
-// --- Computed ---
+const handlePaymentUpdate = async () => {
+    if (!order.value || !selectedPaymentStatus.value || selectedPaymentStatus.value === order.value.paymentStatus) return
+
+    isUpdatingPayment.value = true
+    try {
+        const { data: { session } } = await userStore.supabase.auth.getSession()
+
+        const response = await fetch(`${API_URL}/encomendas/${order.value.id}/pagamento`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${session?.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: selectedPaymentStatus.value })
+        })
+
+        if (!response.ok) throw new Error('Falha ao atualizar pagamento')
+
+        addToast('Pagamento atualizado com sucesso!', 'success')
+
+        fetchOrderDetails(order.value.id)
+    } catch (e) {
+        console.error(e)
+        addToast('Erro ao atualizar pagamento.', 'error')
+    } finally {
+        isUpdatingPayment.value = false
+    }
+}
+
+const handleStatusUpdate = async () => {
+    if (!order.value || !selectedNewStatus.value) return
+
+    if (selectedNewStatus.value === order.value.status) return
+
+    isUpdatingStatus.value = true
+    try {
+        const { data: { session } } = await userStore.supabase.auth.getSession()
+
+        const response = await fetch(`${API_URL}/encomendas/${order.value.id}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${session?.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: selectedNewStatus.value })
+        })
+
+        if (!response.ok) throw new Error('Falha ao atualizar')
+
+        order.value.status = selectedNewStatus.value
+        order.value.displayStatus = getDisplayStatus(selectedNewStatus.value)
+
+        addToast('Status atualizado e e-mails enviados!', 'success')
+    } catch (e) {
+        console.error(e)
+        addToast('Erro ao atualizar status do pedido.', 'error')
+    } finally {
+        isUpdatingStatus.value = false
+    }
+}
+
 const subtotal = computed(() => order.value?.items.reduce((t, i) => t + i.price * i.quantity, 0) || 0)
 const grandTotal = computed(() => (subtotal.value + (order.value?.summary.deliveryFee || 0)) - (order.value?.summary.discount || 0))
 
@@ -175,7 +254,6 @@ const currentStatusIndex = computed(() => {
     const s = order.value.status
     if (s === 'CANCELADO') return -1
     const levels = ['PENDENTE', 'CONFIRMADO', 'EM_PREPARACAO', 'SAIU_PARA_ENTREGA', 'ENTREGUE', 'CONCLUIDO']
-    // Mapeamento simples para a barra de progresso
     if (['PENDENTE', 'AGUARDANDO_PAGAMENTO'].includes(s)) return 1
     if (['PAGO', 'CONFIRMADO'].includes(s)) return 2
     if (s === 'EM_PREPARACAO') return 3
@@ -205,20 +283,23 @@ const handleCancelOrder = async (reason: string) => {
         order.value.status = 'CANCELADO'
         order.value.displayStatus = 'Cancelado'
         showCancelModal.value = false
+        addToast('Encomenda cancelada com sucesso!', 'success')
     } catch (e) {
-        alert('Erro ao cancelar')
+        addToast('Erro ao cancelar encomenda.', 'error')
     } finally {
         isCancelling.value = false
     }
 }
 
 onMounted(() => {
+    window.scrollTo(0, 0);
     if (route.params.id) fetchOrderDetails(route.params.id as string)
 })
 </script>
 
 <template>
     <div class="admin-detail-page">
+        <ToastContainer />
         <div v-if="isLoading" class="loading-state">
             <font-awesome-icon :icon="faSpinner" spin size="3x" class="text-blue" />
             <p>Carregando dados da encomenda...</p>
@@ -298,6 +379,47 @@ onMounted(() => {
                 </div>
 
                 <div class="sidebar-column">
+                    <div v-if="order.status !== 'CANCELADO'" class="card status-manager-card">
+                        <div class="card-title">
+                            <font-awesome-icon :icon="faClipboardCheck" class="icon-blue" />
+                            <h3>Atualizar Status</h3>
+                        </div>
+                        <div class="status-controls">
+                            <div class="select-wrapper">
+                                <select v-model="selectedNewStatus">
+                                    <option v-for="st in availableStatuses" :key="st.value" :value="st.value">
+                                        {{ st.label }}
+                                    </option>
+                                </select>
+                            </div>
+                            <button class="btn-save-status" @click="handleStatusUpdate"
+                                :disabled="isUpdatingStatus || selectedNewStatus === order.status">
+                                <font-awesome-icon :icon="isUpdatingStatus ? faSpinner : faSave"
+                                    :spin="isUpdatingStatus" />
+                                {{ isUpdatingStatus ? 'Sal...' : 'Salvar' }}
+                            </button>
+                        </div>
+                    </div>
+                    <div v-if="order.status !== 'CANCELADO'" class="card payment-manager-card">
+                        <div class="card-title">
+                            <font-awesome-icon :icon="faMoneyBillWave" class="icon-green" />
+                            <h3>Pagamento</h3>
+                        </div>
+                        <div class="status-controls">
+                            <div class="select-wrapper">
+                                <select v-model="selectedPaymentStatus">
+                                    <option v-for="st in paymentStatuses" :key="st.value" :value="st.value">
+                                        {{ st.label }}
+                                    </option>
+                                </select>
+                            </div>
+                            <button class="btn-save-payment" @click="handlePaymentUpdate"
+                                :disabled="isUpdatingPayment || selectedPaymentStatus === order.paymentStatus">
+                                <font-awesome-icon :icon="isUpdatingPayment ? faSpinner : faSave"
+                                    :spin="isUpdatingPayment" />
+                            </button>
+                        </div>
+                    </div>
                     <div v-if="order.status !== 'CANCELADO' && order.status !== 'CONCLUIDO'" class="card actions-card">
                         <button class="btn-cancel" @click="showCancelModal = true">
                             <font-awesome-icon :icon="faBan" /> Cancelar Encomenda
@@ -333,7 +455,7 @@ onMounted(() => {
                     <div class="card summary-card">
                         <div class="summary-row"><span>Subtotal</span> <span>{{ formatCurrency(subtotal) }}</span></div>
                         <div class="summary-row"><span>Entrega</span> <span>{{ formatCurrency(order.summary.deliveryFee)
-                        }}</span></div>
+                                }}</span></div>
                         <div v-if="order.summary.discount" class="summary-row discount"><span>Desconto</span> <span>-{{
                             formatCurrency(order.summary.discount) }}</span></div>
                         <div class="divider"></div>
@@ -767,8 +889,103 @@ onMounted(() => {
     transition: all 0.2s;
 }
 
+.payment-manager-card {
+    border-left: 4px solid #10b981;
+}
+
+.icon-green {
+    color: #10b981;
+}
+
+.btn-save-payment {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+}
+
+.btn-save-payment:hover:not(:disabled) {
+    background-color: #059669;
+}
+
+.btn-save-payment:disabled {
+    background-color: #a7f3d0;
+    cursor: not-allowed;
+}
+
 .btn-cancel:hover {
     background: #fee2e2;
+}
+
+.status-manager-card {
+    border-left: 4px solid #3b82f6;
+}
+
+.status-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.select-wrapper {
+    flex-grow: 1;
+    position: relative;
+}
+
+.select-wrapper select {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    color: #334155;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    appearance: none;
+    /* Remove estilo padrão do browser */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+}
+
+.select-wrapper select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.btn-save-status {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+    font-family: var(--font-title);
+}
+
+.btn-save-status:hover:not(:disabled) {
+    background-color: #2563eb;
+}
+
+.btn-save-status:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 @media (max-width: 900px) {

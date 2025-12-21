@@ -26,6 +26,9 @@ import AdminUsersView from '../views/admin/UsersView.vue'
 import { useCartStore } from '@/stores/cart'
 import AdminOrdersCalendar from '../views/admin/OrdersCalendarView.vue'
 import AdminOrderDetailView from '../views/admin/AdminOrderDetailView.vue'
+import AdminCreateOrderView from '../views/admin/AdminCreateOrderView.vue'
+import AdminOrderClientSelectView from '../views/admin/AdminOrderCheckoutView.vue'
+import AdminOrderAddressPaymentView from '../views/admin/AdminOrderAddressPaymentView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -146,6 +149,21 @@ const router = createRouter({
           path: 'encomendas',
           name: 'admin-encomendas',
           component: AdminOrdersCalendar,
+        },
+        {
+          path: 'encomendas/criar',
+          name: 'admin-criar-encomenda',
+          component: AdminCreateOrderView,
+        },
+        {
+          path: 'encomendas/criar/cliente',
+          name: 'admin-order-client-select',
+          component: AdminOrderClientSelectView,
+        },
+        {
+          path: 'encomendas/criar/pagamento',
+          name: 'admin-order-address-payment',
+          component: AdminOrderAddressPaymentView,
         },
         {
           path: 'encomendas/:id',

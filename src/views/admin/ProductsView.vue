@@ -227,6 +227,7 @@ const handleUpdateCategoryPrice = async (payload: { categoryId: number, newPrice
 }
 
 onMounted(() => {
+    window.scrollTo(0, 0);
     fetchData()
 })
 </script>

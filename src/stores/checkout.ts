@@ -121,7 +121,6 @@ export const useCheckoutStore = defineStore('checkout', () => {
   }
 
   async function calculateShipping() {
-    // Só calcula se tiver os dados mínimos
     if (!address.value.cep || !address.value.number || !address.value.street) return
 
     isCalculatingFee.value = true
@@ -146,19 +145,17 @@ export const useCheckoutStore = defineStore('checkout', () => {
         calculatedDeliveryFee.value = data.fee
         console.log(`Distância: ${data.distance}, Frete: R$ ${data.fee}`)
       } else {
-        // Se der erro, assume o padrão de 20 ou exibe erro
         console.error('Erro ao calcular frete')
         calculatedDeliveryFee.value = 20
       }
     } catch (error) {
       console.error(error)
-      calculatedDeliveryFee.value = 20 // Fallback
+      calculatedDeliveryFee.value = 20
     } finally {
       isCalculatingFee.value = false
     }
   }
 
-  // Lembre de resetar o frete se mudar o método para pickup
   watch(deliveryMethod, (newMethod) => {
     paymentMethod.value = 'pix'
     if (newMethod === 'pickup') {

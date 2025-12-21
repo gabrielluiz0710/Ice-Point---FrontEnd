@@ -113,16 +113,8 @@ function confirmEmptyCart() {
     overflow: auto;
     flex: 1 1 auto;
     min-height: 0;
-
-    /* --- ALTERAÇÃO AQUI --- */
-    /* 1. Margem Negativa: Puxa a barra de rolagem para a direita, 
-       ocupando o espaço do padding do pai */
     margin-right: -1.5rem;
-
-    /* 2. Padding Interno: Empurra o texto de volta para a esquerda 
-       para ele alinhar com o título e não ficar colado na barra */
     padding-right: 1.5rem;
-
     padding-bottom: 0.5rem;
 }
 

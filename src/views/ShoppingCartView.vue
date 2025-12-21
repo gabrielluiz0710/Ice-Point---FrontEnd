@@ -581,7 +581,6 @@ onMounted(() => {
     position: fixed;
     bottom: 2rem;
     left: 2rem;
-    /* Posição inicial padrão */
     z-index: 999;
     display: flex;
     align-items: center;
@@ -595,26 +594,19 @@ onMounted(() => {
         0 8px 10px -6px rgba(var(--c-azul-rgb), 0.1);
     border: 2px solid white;
 
-    /* Alterações para o Drag */
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: grab;
-    /* Mãozinha aberta */
     touch-action: none;
-    /* Impede scroll do browser ao tocar no elemento */
     user-select: none;
 }
 
-/* Quando estiver arrastando, muda o cursor e REMOVE a transição para ser instantâneo */
 .floating-counter.is-dragging {
     cursor: grabbing;
-    /* Mãozinha fechada */
     transition: none !important;
     box-shadow: 0 15px 30px -5px rgba(var(--c-azul-rgb), 0.4);
-    /* Sombra maior ao levantar */
     z-index: 1000;
 }
 
-/* Estilo do Botão de Fechar */
 .btn-close-floating {
     position: absolute;
     top: -8px;
@@ -622,7 +614,6 @@ onMounted(() => {
     width: 24px;
     height: 24px;
     background: var(--c-rosa);
-    /* Usando a cor rosa do seu tema */
     color: white;
     border: 2px solid white;
     border-radius: 50%;

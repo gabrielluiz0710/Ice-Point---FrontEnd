@@ -132,6 +132,7 @@ const handleDeleteUser = async () => {
 }
 
 onMounted(() => {
+    window.scrollTo(0, 0);
     fetchUsers()
 })
 </script>
