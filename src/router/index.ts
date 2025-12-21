@@ -133,6 +133,7 @@ const router = createRouter({
           path: '',
           name: 'admin-dashboard',
           component: AdminDashboard,
+          meta: { roles: ['ADMIN'] },
         },
         {
           path: 'produtos',

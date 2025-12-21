@@ -30,6 +30,10 @@ const checkScreenSize = () => {
 onMounted(() => {
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize)
+
+    if (userStore.user?.tipo !== 'ADMIN' && route.path === '/painel-controle') {
+        router.replace('/painel-controle/encomendas')
+    }
 })
 
 onUnmounted(() => {
@@ -59,11 +63,16 @@ const toggleIcon = computed(() => {
 })
 
 const menuItems = computed(() => [
-    { to: '/painel-controle', icon: faChartLine, label: 'Dashboard', exact: true },
+    ...(userStore.user?.tipo === 'ADMIN'
+        ? [{ to: '/painel-controle', icon: faChartLine, label: 'Dashboard', exact: true }]
+        : []),
     { to: '/painel-controle/encomendas', icon: faTruck, label: 'Encomendas' },
     { to: '/painel-controle/produtos', icon: faBox, label: 'Produtos' },
     { to: '/painel-controle/tarefas', icon: faTasks, label: 'Tarefas' },
-    ...(userStore.user?.tipo === 'ADMIN' ? [{ to: '/painel-controle/usuarios', icon: faUsers, label: 'Usuários' }] : []),
+    ...(userStore.user?.tipo === 'ADMIN'
+        ? [{ to: '/painel-controle/usuarios', icon: faUsers, label: 'Usuários' }]
+        : []),
+
     { to: '/painel-controle/configuracoes', icon: faCog, label: 'Configurações' },
 ])
 
