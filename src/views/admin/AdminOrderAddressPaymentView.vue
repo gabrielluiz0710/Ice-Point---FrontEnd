@@ -76,6 +76,8 @@ const handleFinish = async () => {
             enderecoBairro: store.address.neighborhood,
             enderecoCidade: store.address.city,
             enderecoEstado: store.address.state,
+            taxaEntrega: store.shippingFee,
+            valorDesconto: store.discount,
         }
 
         const { data: { session } } = await userStore.supabase.auth.getSession()

@@ -129,12 +129,36 @@ const goToProduct = (productId: number) => {
   router.push(`/produtos/${productId}`);
 };
 
+const isGroupedView = computed(() => {
+  return selectedCategoryId.value === 'all' && searchTerm.value.trim() === '';
+});
+
+const groupedProducts = computed(() => {
+  const groups: Record<string, any[]> = {};
+
+  products.value.forEach(p => {
+    if (!groups[p.categoryName]) groups[p.categoryName] = [];
+    groups[p.categoryName].push(p);
+  });
+
+  const sortedCategoryNames = Object.keys(groups).sort();
+
+  return sortedCategoryNames.map(catName => {
+    return {
+      categoryName: catName,
+      items: groups[catName].sort((a, b) => a.name.localeCompare(b.name))
+    };
+  });
+});
+
 const filteredProducts = computed(() => {
-  return products.value.filter(product => {
+  const filtered = products.value.filter(product => {
     const categoryMatch = selectedCategoryId.value === 'all' || product.categoryId === selectedCategoryId.value;
     const searchMatch = product.name.toLowerCase().includes(searchTerm.value.toLowerCase().trim());
     return categoryMatch && searchMatch;
   });
+
+  return filtered.sort((a, b) => a.name.localeCompare(b.name));
 });
 
 const selectCategory = (id: string | number) => {
@@ -192,17 +216,6 @@ onMounted(() => {
         <a href="#sabores" class="cta-button" @click.prevent="scrollToFilters">Quero Ver os Sabores!</a>
       </div>
       <div class="floating-shape shape-1"></div>
-      <div class="floating-shape shape-2"></div>
-      <div class="floating-shape sprinkle shape-3"></div>
-      <div class="floating-shape triangle shape-4"></div>
-      <div class="floating-shape shape-5"></div>
-      <div class="floating-shape sprinkle shape-6"></div>
-      <div class="floating-shape shape-7"></div>
-      <div class="floating-shape triangle shape-8"></div>
-      <div class="floating-shape sprinkle shape-9"></div>
-      <div class="floating-shape shape-10"></div>
-      <div class="floating-shape triangle shape-11"></div>
-      <div class="floating-shape sprinkle shape-12"></div>
     </section>
 
     <section id="sabores" class="products-section">
@@ -241,9 +254,56 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-else-if="filteredProducts.length === 0" id="noResultsMessage"
+        <div v-else-if="!isGroupedView && filteredProducts.length === 0" id="noResultsMessage"
           style="text-align: center; padding: 20px; width: 100%;">
           <h3>Nenhum resultado encontrado para sua busca.</h3>
+        </div>
+
+        <div v-else-if="isGroupedView" class="grouped-container">
+          <div v-for="group in groupedProducts" :key="group.categoryName" class="category-group-block">
+
+            <h3 class="category-separator-title">{{ group.categoryName }}</h3>
+
+            <div class="products-grid">
+              <div v-for="product in group.items" :key="product.id" class="product-card"
+                @click="goToProduct(product.id)">
+
+                <div class="product-visual">
+                  <img v-if="product.type === 'image'" :src="product.src" :alt="product.name" />
+
+                  <IconeSorvete v-else-if="product.iconStyle === 'ice-cream'" :cor-sabor="getSaborColor(product.name)"
+                    :cor-casquinha="getCasquinhaColor()" :cor-detalhe-casquinha="'#c18c5d'" />
+
+                  <svg v-else-if="product.iconStyle === 'custom-popsicle'" class="custom-popsicle-icon"
+                    viewBox="0 0 80 140">
+                    <path d="M10,50 C10,10 70,10 70,50 V 110 H 10 Z" :style="{ fill: getSaborColor(product.name) }" />
+                    <rect x="33" y="105" width="14" height="35" rx="4" />
+                  </svg>
+
+                  <svg v-else-if="product.iconStyle === 'ituzinho-icon'" class="ituzinho-icon" viewBox="0 0 60 160">
+                    <rect x="24" y="120" width="12" height="40" rx="4" />
+                    <path
+                      d="M10,125 Q-5,105 10,85 Q-5,65 10,45 Q-5,25 10,5 C10,-5 50,-5 50,5 Q65,25 50,45 Q65,65 50,85 Q65,105 50,125 Z"
+                      :style="{ fill: getSaborColor(product.name) }" />
+                  </svg>
+
+                  <svg v-else-if="product.iconStyle === 'skimo-icon'" class="skimo-icon" viewBox="0 0 80 140">
+                    <rect class="stick" x="33" y="105" width="14" height="35" rx="4" />
+                    <path class="inner-ice-cream" d="M10,50 C10,10 70,10 70,50 V 110 H 10 Z"
+                      :style="{ fill: getSaborColor(product.name) }" />
+                    <path class="chocolate-shell"
+                      d="M10,110 V50 C10,10 70,10 70,50 V40 C50,35 55,70 70,75 V110 H10 Z" />
+                  </svg>
+
+                  <font-awesome-icon v-else-if="product.faIcon" :icon="product.faIcon"
+                    :style="{ color: getSaborColor(product.name) }" />
+                </div>
+
+                <h3>{{ product.name }}</h3>
+                <button class="card-cta-button" @click.stop="goToProduct(product.id)">Ver mais</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div v-else class="products-grid">
@@ -251,7 +311,6 @@ onMounted(() => {
             @click="goToProduct(product.id)">
 
             <div class="product-visual">
-
               <img v-if="product.type === 'image'" :src="product.src" :alt="product.name" />
 
               <IconeSorvete v-else-if="product.iconStyle === 'ice-cream'" :cor-sabor="getSaborColor(product.name)"
@@ -279,12 +338,11 @@ onMounted(() => {
 
               <font-awesome-icon v-else-if="product.faIcon" :icon="product.faIcon"
                 :style="{ color: getSaborColor(product.name) }" />
-
             </div>
 
             <h3>{{ product.name }}</h3>
 
-            <p v-if="selectedCategoryId === 'all'" class="product-card-category">
+            <p class="product-card-category">
               {{ product.categoryName }}
             </p>
 
@@ -1047,5 +1105,21 @@ header .container {
   100% {
     background-position: -200% 0;
   }
+}
+
+.category-group-block {
+  margin-bottom: 3rem;
+  width: 100%;
+}
+
+.category-separator-title {
+  font-family: 'Fredoka', sans-serif;
+  color: var(--c-azul, #007bff);
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
+  width: 100%;
+  display: block;
 }
 </style>

@@ -18,7 +18,9 @@ import {
     faTruck,
     faExclamationTriangle,
     faHome,
-    faQuestionCircle
+    faQuestionCircle,
+    faSearch,
+    faTimes
 } from '@fortawesome/free-solid-svg-icons'
 import { useUserStore } from '@/stores/user'
 import CartSelectionStep from './CartSelectionStep.vue'
@@ -33,6 +35,10 @@ const selectedAddressId = ref<number | null>(null);
 let cepAbortController: AbortController | null = null;
 const showCepNotFoundErrorModal = ref(false);
 const showCityErrorModal = ref(false);
+const showAddressSearchModal = ref(false)
+const searchLoading = ref(false)
+const searchError = ref('')
+const foundAddresses = ref<any[]>([])
 
 const minDeliveryDate = computed(() => {
     const tomorrow = new Date();
@@ -60,6 +66,12 @@ const savedAddresses = computed(() => {
     }
     return [];
 });
+
+const modalSearch = ref({
+    street: '',
+    city: 'Uberaba',
+    state: 'MG'
+})
 
 const schema = yup.object({
     deliveryMethod: yup.string().required('Escolha um método'),
@@ -185,6 +197,53 @@ function selectSavedAddress(addr: any) {
     };
 
     checkoutStore.calculateShipping();
+}
+
+const searchAddressByStreet = async () => {
+    const { street, city, state } = modalSearch.value
+
+    if (street.length < 3) {
+        searchError.value = 'Digite pelo menos 3 letras da rua.'
+        return
+    }
+
+    searchLoading.value = true
+    searchError.value = ''
+    foundAddresses.value = []
+
+    try {
+        const url = `https://viacep.com.br/ws/${state}/${city}/${encodeURIComponent(street)}/json/`
+        const res = await fetch(url)
+        const data = await res.json()
+
+        if (Array.isArray(data) && data.length > 0) {
+            foundAddresses.value = data
+        } else {
+            searchError.value = 'Nenhum endereço encontrado.'
+        }
+    } catch (e) {
+        searchError.value = 'Erro ao buscar. Verifique a conexão.'
+    } finally {
+        searchLoading.value = false
+    }
+}
+
+const selectFoundAddress = (addr: any) => {
+    setFieldValue('cep', addr.cep)
+    setFieldValue('street', addr.logradouro)
+    setFieldValue('neighborhood', addr.bairro)
+    setFieldValue('city', addr.localidade)
+    setFieldValue('state', addr.uf)
+
+    handleAddressChange()
+
+    showAddressSearchModal.value = false
+    foundAddresses.value = []
+    modalSearch.value.street = ''
+
+    setTimeout(() => {
+        document.getElementById('number')?.focus()
+    }, 100)
 }
 
 async function handleCepLookup(cepValue: string) {
@@ -482,6 +541,11 @@ const addressFormFields = [
                                         :disabled="(isCepLoading && fieldData.name !== 'cep')" />
                                 </Field>
                             </div>
+                            <div v-if="fieldData.name === 'cep'" class="cep-helper">
+                                <button type="button" class="btn-link" @click="showAddressSearchModal = true">
+                                    <font-awesome-icon :icon="faSearch" /> Não sei o CEP
+                                </button>
+                            </div>
                             <ErrorMessage :name="fieldData.name" class="error-message" />
                         </div>
                     </div>
@@ -540,6 +604,50 @@ const addressFormFields = [
             <div v-if="values.scheduleDate && values.scheduleTime && values.deliveryMethod" class="cart-step-wrapper">
                 <h3 class="section-subtitle-endereco">Seleção de Carrinhos</h3>
                 <CartSelectionStep :key="dateTimeKey" @completed="() => { }" />
+            </div>
+        </Transition>
+
+        <Transition name="modal-fade">
+            <div v-if="showAddressSearchModal" class="modal-overlay" @click="showAddressSearchModal = false">
+                <div class="modal-content search-modal" @click.stop>
+                    <div class="modal-header">
+                        <h3>Buscar Endereço</h3>
+                        <button type="button" class="close-btn" @click="showAddressSearchModal = false">
+                            <font-awesome-icon :icon="faTimes" />
+                        </button>
+                    </div>
+
+                    <p class="modal-desc">Digite o nome da rua para encontrar o CEP.</p>
+
+                    <div class="search-box">
+                        <div class="input-wrapper">
+                            <input type="text" v-model="modalSearch.street" placeholder="Ex: Avenida Leopoldino"
+                                @keyup.enter="searchAddressByStreet" class="search-input">
+                            <button type="button" class="btn-search-action" @click="searchAddressByStreet">
+                                <font-awesome-icon :icon="searchLoading ? faSpinner : faSearch" :spin="searchLoading" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="searchError" class="error-msg-box">
+                        {{ searchError }}
+                    </div>
+
+                    <div v-if="foundAddresses.length > 0" class="results-list">
+                        <div v-for="(addr, idx) in foundAddresses" :key="idx" class="result-item"
+                            @click="selectFoundAddress(addr)">
+                            <div class="res-info">
+                                <strong>{{ addr.logradouro }}</strong>
+                                <span>{{ addr.bairro }} - {{ addr.localidade }}/{{ addr.uf }}</span>
+                            </div>
+                            <div class="res-cep">{{ addr.cep }}</div>
+                        </div>
+                    </div>
+
+                    <div v-else-if="!searchLoading && modalSearch.street.length > 2 && !searchError" class="empty-hint">
+                        Pressione Enter ou clique na lupa para buscar.
+                    </div>
+                </div>
             </div>
         </Transition>
 
@@ -1027,5 +1135,146 @@ const addressFormFields = [
     font-size: 0.9rem;
     color: #666;
     font-style: italic;
+}
+
+.cep-helper {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--c-azul, #007bff);
+    font-family: var(--font-title);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.search-modal {
+    max-width: 500px;
+    width: 90%;
+    padding: 1.5rem;
+    text-align: left;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-desc {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.search-box .input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0 10px;
+    background: #f9f9f9;
+    font-family: var(--font-title);
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 12px 0;
+    outline: none;
+    font-family: var(--font-title);
+
+}
+
+.btn-search-action {
+    background: none;
+    border: none;
+    color: var(--c-azul, #007bff);
+    cursor: pointer;
+    padding: 8px;
+}
+
+.results-list {
+    margin-top: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+}
+
+.result-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.result-item:hover {
+    background-color: #f0f8ff;
+}
+
+.res-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9rem;
+}
+
+.res-info strong {
+    color: #333;
+}
+
+.res-info span {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.res-cep {
+    font-weight: bold;
+    color: var(--c-azul, #007bff);
+    font-size: 0.85rem;
+}
+
+.error-msg-box {
+    margin-top: 10px;
+    color: #dc3545;
+    font-size: 0.9rem;
+    background: #fff5f5;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.empty-hint {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #999;
 }
 </style>

@@ -43,12 +43,20 @@ const filteredProducts = computed(() => {
     }
 
     const sorted = [...products];
+
     if (sortPrice.value === 'asc') {
         sorted.sort((a, b) => a.preco_unitario - b.preco_unitario);
     } else if (sortPrice.value === 'desc') {
         sorted.sort((a, b) => b.preco_unitario - a.preco_unitario);
     } else {
-        sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+        sorted.sort((a, b) => {
+            const catA = a.categoria?.nome || '';
+            const catB = b.categoria?.nome || '';
+
+            const compareCategory = catA.localeCompare(catB);
+            if (compareCategory !== 0) return compareCategory;
+            return a.nome.localeCompare(b.nome);
+        });
     }
 
     return sorted;
@@ -175,7 +183,9 @@ onMounted(() => {
                                     </button>
 
                                     <input type="number" :value="product.quantity"
-                                        @input="(e) => handleInputQty(product, e)" class="input-number" min="0" />
+                                        @input="(e) => handleInputQty(product, e)"
+                                        @wheel="($event.target as HTMLInputElement).blur()" class="input-number"
+                                        min="0" />
 
                                     <button @click="updateQty(product, 1)" class="btn-control plus">
                                         <FontAwesomeIcon :icon="faPlus" />
