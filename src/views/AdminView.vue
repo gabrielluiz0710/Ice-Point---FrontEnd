@@ -179,7 +179,7 @@ const isActive = (path: string, exact: boolean = false) => {
     flex-direction: column;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
-    z-index: 20;
+    z-index: 1000;
     overflow: hidden;
 }
 
@@ -509,7 +509,7 @@ const isActive = (path: string, exact: boolean = false) => {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 15;
+    z-index: 999;
     backdrop-filter: blur(2px);
     transition: opacity 0.3s;
 }
@@ -523,6 +523,7 @@ const isActive = (path: string, exact: boolean = false) => {
         position: fixed;
         height: 100%;
         transform: translateX(-100%);
+        z-index: 1000;
     }
 
     .admin-container.collapsed .admin-sidebar {

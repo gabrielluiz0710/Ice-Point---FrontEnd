@@ -649,7 +649,7 @@ onMounted(() => {
     padding: 8px;
     box-shadow: var(--card-shadow-hover);
     min-width: 200px;
-    z-index: 100000;
+    z-index: 90;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -1417,6 +1417,26 @@ onMounted(() => {
     .skeleton-chart-sm,
     .skeleton-list {
         height: 120px;
+    }
+
+    .header-actions {
+        width: 100%;
+    }
+
+    .filter-dropdown {
+        width: 100%;
+    }
+
+    .btn-filter {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .filter-menu {
+        right: auto;
+        left: 0;
+        width: 100%;
+        min-width: unset;
     }
 }
 </style>
