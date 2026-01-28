@@ -289,7 +289,7 @@ onMounted(() => {
             @empty-cart="cartStore.emptyCart" @checkout="handleCheckout"
             @expand-change="(val) => isMobileCartExpanded = val" />
 
-        <transition name="pop">
+        <!-- <transition name="pop">
             <div v-show="cartStore.totalCartQuantity > 0 && !isMobileCartExpanded && !isFloatingClosed" ref="floatingEl"
                 class="floating-counter" :class="{ 'bump': isBumping, 'is-dragging': isDragging }"
                 :style="floatingStyle" @mousedown="startDrag" @touchstart="startDrag">
@@ -310,7 +310,7 @@ onMounted(() => {
                     </span>
                 </div>
             </div>
-        </transition>
+        </transition> -->
     </div>
 
     <Teleport to="body">

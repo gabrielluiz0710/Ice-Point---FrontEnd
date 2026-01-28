@@ -209,7 +209,6 @@ onMounted(() => {
                     @empty-cart="adminCart.emptyCart" @checkout="handleCheckout" />
             </aside>
         </div>
-
         <AdminMobileCartBar :cart-items="adminCart.cartItems" :total="adminCart.totalCartPrice"
             @empty-cart="adminCart.emptyCart" @checkout="handleCheckout" />
     </div>
@@ -220,7 +219,9 @@ onMounted(() => {
     max-width: 1400px;
     margin: 0 auto;
     padding: 1.5rem;
-    padding-bottom: 5rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
     font-family: 'Fredoka', sans-serif;
     color: var(--c-text-dark);
 }
@@ -242,10 +243,11 @@ onMounted(() => {
 
 .layout-grid {
     display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 2rem;
     align-items: start;
+    grid-template-columns: 1fr 320px;
+    gap: 2rem;
     margin-bottom: 2rem;
+    flex: 1;
 }
 
 .toolbar {
@@ -558,7 +560,7 @@ select {
     box-shadow: 0 6px 15px rgba(var(--c-azul-rgb), 0.3);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
     .layout-grid {
         grid-template-columns: 1fr;
     }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, TransitionGroup, Transition } from 'vue'
+import { ref, watch, TransitionGroup, Transition, computed } from 'vue'
 import { faChevronUp, faIceCream, faTrashCan } from '@fortawesome/free-solid-svg-icons'
 import { useRouter } from 'vue-router'
 
@@ -13,7 +13,7 @@ interface CartItem {
     category?: string
 }
 
-defineProps<{
+const props = defineProps<{
     cartItems: CartItem[]
     total: number
 }>()
@@ -29,6 +29,27 @@ watch(showConfirmation, (isShowing) => {
     } else {
         document.body.classList.remove('modal-open')
     }
+})
+
+const totalQuantity = computed(() => {
+    return props.cartItems.reduce((acc, item) => acc + item.quantity, 0)
+})
+
+const groupedItems = computed(() => {
+    const groups: Record<string, { name: string; quantity: number; items: CartItem[] }> = {}
+
+    props.cartItems.forEach(item => {
+        const catName = item.category || 'Outros'
+
+        if (!groups[catName]) {
+            groups[catName] = { name: catName, quantity: 0, items: [] }
+        }
+
+        groups[catName].items.push(item)
+        groups[catName].quantity += item.quantity
+    })
+
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name))
 })
 
 watch(isExpanded, (newValue) => {
@@ -55,12 +76,12 @@ function goToCheckout() {
             <div class="collapsed-view" @click="isExpanded = !isExpanded">
                 <div class="total-info">
                     <div class="price-details">
-                        <span class="item-count">{{ cartItems.length }} {{ cartItems.length === 1 ? 'item' : 'itens'
-                        }}</span>
+                        <span class="item-count">
+                            {{ totalQuantity }} {{ totalQuantity === 1 ? 'unidade' : 'unidades' }}
+                        </span>
                         <span class="total-price">R$ {{ total.toFixed(2) }}</span>
                     </div>
-                    <button class="toggle-button" aria-label="Ver carrinho"> Ver
-                        Carrinho
+                    <button class="toggle-button" aria-label="Ver carrinho"> Ver Carrinho
                         <font-awesome-icon :icon="faChevronUp" class="arrow-icon" />
                     </button>
                 </div>
@@ -68,9 +89,8 @@ function goToCheckout() {
                 <div class="collapsed-actions">
                     <Transition name="fade-button">
                         <button v-if="!isExpanded" class="action-button" aria-label="Finalizar Compra"
-                            :disabled="cartItems.length === 0"
-                            @click.stop="$emit('checkout'); console.log('Mobile (recolhido): Finalizar Compra clicado!')">
-                            Finalizar Compra
+                            :disabled="cartItems.length === 0" @click.stop="$emit('checkout')">
+                            Finalizar
                         </button>
                     </Transition>
                 </div>
@@ -85,27 +105,35 @@ function goToCheckout() {
                     </button>
                 </div>
 
-                <template v-if="cartItems.length > 0">
-                    <TransitionGroup name="list" tag="ul" class="summary-list">
-                        <li v-for="item in cartItems" :key="item.id" class="summary-item">
-                            <div class="item-info-left">
-                                <span class="item-name">{{ item.name }}</span>
-                                <span class="item-category" v-if="item.category">{{ item.category }}</span>
+                <div v-if="cartItems.length > 0" class="grouped-list-container custom-scrollbar">
+                    <div v-for="group in groupedItems" :key="group.name" class="category-group">
 
-                                <span class="item-details">{{ item.quantity }} x R$ {{ item.price.toFixed(2) }}</span>
-                            </div>
-                            <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
-                        </li>
-                    </TransitionGroup>
-                </template>
+                        <div class="category-header">
+                            <span class="cat-title">{{ group.name }}</span>
+                            <span class="cat-badge">{{ group.quantity }} unidades</span>
+                        </div>
+
+                        <ul class="group-list">
+                            <li v-for="item in group.items" :key="item.id" class="summary-item">
+                                <div class="item-info-left">
+                                    <div class="name-row">
+                                        <span class="qty-badge">{{ item.quantity }}x</span>
+                                        <span class="item-name">{{ item.name }}</span>
+                                    </div>
+                                </div>
+                                <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
                 <div v-else class="empty-cart-message">
                     <font-awesome-icon :icon="faIceCream" class="empty-cart-icon" />
                     <p class="empty-cart-title">Seu carrinho está vazio</p>
                     <p class="empty-cart-subtitle">Adicione seus sabores favoritos para vê-los aqui!</p>
                 </div>
 
-                <button class="checkout-button" :disabled="cartItems.length === 0"
-                    @click="$emit('checkout'); console.log('Mobile (expandido): Finalizar Compra clicado!')">
+                <button class="checkout-button" :disabled="cartItems.length === 0" @click="$emit('checkout')">
                     Finalizar Compra
                 </button>
             </div>
@@ -552,5 +580,102 @@ function goToCheckout() {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+.grouped-list-container {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    padding-right: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #ddd;
+    border-radius: 10px;
+}
+
+.category-group {
+    margin-bottom: 1.5rem;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px dashed #eee;
+}
+
+.cat-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #999;
+    letter-spacing: 0.5px;
+}
+
+.cat-badge {
+    background: #e0f2fe;
+    color: var(--c-azul);
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.group-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+}
+
+.name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.qty-badge {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--c-rosa);
+    background: #fff0f5;
+    padding: 2px 6px;
+    border-radius: 6px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.item-name {
+    font-weight: 500;
+    color: var(--c-text-dark);
+    font-size: 0.95rem;
+}
+
+.item-total {
+    font-weight: 600;
+    color: #555;
+    font-size: 0.95rem;
 }
 </style>

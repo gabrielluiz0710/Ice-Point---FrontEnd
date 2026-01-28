@@ -13,6 +13,28 @@ const emit = defineEmits(['empty-cart', 'checkout'])
 
 const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+
+const totalQuantity = computed(() => {
+    return props.cartItems.reduce((acc, item) => acc + item.quantity, 0)
+})
+
+const groupedItems = computed(() => {
+    const groups: Record<string, { name: string; quantity: number; items: DBProduct[] }> = {}
+
+    props.cartItems.forEach(item => {
+        const catName = item.categoria?.nome || 'Outros'
+
+        if (!groups[catName]) {
+            groups[catName] = { name: catName, quantity: 0, items: [] }
+        }
+
+        groups[catName].items.push(item)
+        groups[catName].quantity += item.quantity
+    })
+
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name))
+})
+
 </script>
 
 <template>
@@ -29,18 +51,32 @@ const formatCurrency = (val: number) =>
                 Nenhum item selecionado.
             </div>
 
-            <ul v-else class="item-list">
-                <li v-for="item in cartItems" :key="item.id" class="item-row">
-                    <div class="item-desc">
-                        <span class="qty">{{ item.quantity }}x</span>
-                        <span class="name">{{ item.nome }}</span>
+            <div v-else class="grouped-list">
+                <div v-for="group in groupedItems" :key="group.name" class="category-group">
+
+                    <div class="category-header">
+                        <span class="cat-title">{{ group.name }}</span>
+                        <span class="cat-total-badge">{{ group.quantity }}</span>
                     </div>
-                    <span class="price">{{ formatCurrency(item.preco_unitario * item.quantity) }}</span>
-                </li>
-            </ul>
+
+                    <ul class="item-list">
+                        <li v-for="item in group.items" :key="item.id" class="item-row">
+                            <div class="item-desc">
+                                <span class="qty">{{ item.quantity }}x</span>
+                                <span class="name">{{ item.nome }}</span>
+                            </div>
+                            <span class="price">{{ formatCurrency(item.preco_unitario * item.quantity) }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <div class="footer">
+            <div class="qty-row">
+                <span>Total de Picolés</span>
+                <span class="qty-value">{{ totalQuantity }}</span>
+            </div>
             <div class="total-row">
                 <span>Total Estimado</span>
                 <span class="total-value">{{ formatCurrency(total) }}</span>
@@ -58,7 +94,7 @@ const formatCurrency = (val: number) =>
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1.5rem 0 1.5rem 1.5rem;
     display: flex;
     flex-direction: column;
     height: auto;
@@ -75,6 +111,7 @@ const formatCurrency = (val: number) =>
     padding-bottom: 0.5rem;
     border-bottom: 2px solid #f0f0f0;
     flex-shrink: 0;
+    padding-right: 1.5rem;
 }
 
 .header h3 {
@@ -112,6 +149,7 @@ const formatCurrency = (val: number) =>
     font-style: italic;
     text-align: center;
     margin-top: 1rem;
+    padding-right: 1.5rem;
 }
 
 .item-list {
@@ -152,6 +190,24 @@ const formatCurrency = (val: number) =>
     border-top: 2px solid #f0f0f0;
     padding-top: 1rem;
     flex-shrink: 0;
+    padding-right: 1.5rem;
+}
+
+.qty-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.qty-value {
+    font-weight: 700;
+    color: #555;
+    background: #f5f5f5;
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 .total-row {
@@ -205,5 +261,67 @@ const formatCurrency = (val: number) =>
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #bbb;
+}
+
+.grouped-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 1rem;
+    padding-right: 1.5rem;
+}
+
+.category-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    margin-bottom: 0.2rem;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 10;
+    backdrop-filter: blur(2px);
+}
+
+.cat-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #999;
+    letter-spacing: 0.5px;
+}
+
+.cat-total-badge {
+    background: #f0f0f0;
+    color: #666;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed #f5f5f5;
+    font-size: 0.95rem;
+}
+
+.item-row:last-child {
+    border-bottom: none;
 }
 </style>

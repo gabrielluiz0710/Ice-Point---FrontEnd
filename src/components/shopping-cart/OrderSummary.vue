@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, Transition, TransitionGroup } from 'vue'
+import { ref, watch, Transition, TransitionGroup, computed } from 'vue'
 import { faShoppingCart, faTrashCan } from '@fortawesome/free-solid-svg-icons'
 import { useRouter } from 'vue-router'
 
@@ -13,7 +13,7 @@ interface CartItem {
     category?: string
 }
 
-defineProps<{
+const props = defineProps<{
     cartItems: CartItem[]
     total: number
 }>()
@@ -33,6 +33,27 @@ function confirmEmptyCart() {
     emit('empty-cart')
     showConfirmation.value = false
 }
+
+const totalQuantity = computed(() => {
+    return props.cartItems.reduce((acc, item) => acc + item.quantity, 0)
+})
+
+const groupedItems = computed(() => {
+    const groups: Record<string, { name: string; quantity: number; items: CartItem[] }> = {}
+
+    props.cartItems.forEach(item => {
+        const catName = item.category || 'Outros'
+
+        if (!groups[catName]) {
+            groups[catName] = { name: catName, quantity: 0, items: [] }
+        }
+
+        groups[catName].items.push(item)
+        groups[catName].quantity += item.quantity
+    })
+
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name))
+})
 </script>
 
 <template>
@@ -50,28 +71,46 @@ function confirmEmptyCart() {
                 <font-awesome-icon :icon="faTrashCan" />
                 Esvaziar carrinho
             </button>
+
             <div class="summary-body">
-                <TransitionGroup name="list" tag="ul" class="summary-list">
-                    <li v-for="item in cartItems" :key="item.id" class="summary-item">
-                        <div class="item-info">
-                            <span class="item-name">{{ item.name }}</span>
-                            <span class="item-category" v-if="item.category">{{ item.category }}</span>
-                            <span class="item-details"><strong class="strong">{{ item.quantity }}x</strong> R$ {{
-                                item.price.toFixed(2) }}</span>
+                <div class="grouped-list">
+                    <div v-for="group in groupedItems" :key="group.name" class="category-group">
+
+                        <div class="category-header">
+                            <span class="cat-title">{{ group.name }}</span>
+                            <span class="cat-badge">{{ group.quantity }}</span>
                         </div>
-                        <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
-                    </li>
-                </TransitionGroup>
+
+                        <ul class="summary-list">
+                            <li v-for="item in group.items" :key="item.id" class="summary-item">
+                                <div class="item-info">
+                                    <span class="item-name">{{ item.name }}</span>
+                                    <span class="item-details">
+                                        <strong class="strong">{{ item.quantity }}x</strong> R$ {{ item.price.toFixed(2)
+                                        }}
+                                    </span>
+                                </div>
+                                <span class="item-total">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
-            <div class="summary-total">
-                <span>Total</span>
-                <span>R$ {{ total.toFixed(2) }}</span>
+            <div class="summary-footer-info">
+                <div class="summary-row qty-row">
+                    <span>Total de Itens:</span>
+                    <span class="qty-value">{{ totalQuantity }} unidades</span>
+                </div>
+
+                <div class="summary-row total-row">
+                    <span>Total a Pagar:</span>
+                    <span class="total-value">R$ {{ total.toFixed(2) }}</span>
+                </div>
             </div>
 
             <div class="summary-footer">
-                <button class="checkout-button" :disabled="cartItems.length === 0"
-                    @click="$emit('checkout'); console.log('Desktop: Finalizar Compra clicado!')">
+                <button class="checkout-button" :disabled="cartItems.length === 0" @click="$emit('checkout')">
                     Finalizar Compra
                 </button>
             </div>
@@ -153,7 +192,6 @@ function confirmEmptyCart() {
 
 .summary-footer {
     flex: 0 0 auto;
-    margin-top: 1rem;
     background: transparent;
     z-index: 1;
 }
@@ -421,5 +459,107 @@ function confirmEmptyCart() {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+.grouped-list {
+    padding-bottom: 1rem;
+}
+
+.category-group {
+    margin-bottom: 1rem;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    margin-bottom: 0.2rem;
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(4px);
+    z-index: 5;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cat-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #999;
+    letter-spacing: 0.5px;
+}
+
+.cat-badge {
+    background: #f3f4f6;
+    color: #555;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 12px;
+}
+
+.summary-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 0;
+    border-bottom: 1px dashed #f0f0f0;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-footer-info {
+    padding-top: 1rem;
+    border-top: 2px solid #f5f5f5;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.qty-row {
+    color: var(--c-text-light);
+    font-size: 0.95rem;
+}
+
+.qty-value {
+    font-weight: 600;
+    color: var(--c-azul-dark);
+    background: #c3ecfb;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.total-row {
+    color: var(--c-text-dark);
+    font-size: 1.2rem;
+}
+
+.total-value {
+    font-weight: 900;
+    color: var(--c-azul-dark);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 1.5rem;
+}
+
+.item-name {
+    font-weight: 600;
+    color: var(--c-text-dark);
+    font-size: 0.95rem;
 }
 </style>

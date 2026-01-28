@@ -15,7 +15,7 @@ const socialMedia = [
     { icon: faInstagram, handle: '/icepointuberaba', link: 'https://instagram.com/icepointuberaba' },
     { icon: faTwitter, handle: '/IcePointUberaba', link: 'https://twitter.com/IcePointUberaba' },
     { icon: faLinkedinIn, handle: '/icepointuberaba', link: 'https://linkedin.com/company/icepointuberaba' },
-    { icon: faWhatsapp, handle: '(34) 99965-8035', link: 'https://wa.me/5534999658035' },
+    // { icon: faWhatsapp, handle: '(34) 99965-8035', link: 'https://wa.me/5534999658035' },
 ];
 
 const currentYear = new Date().getFullYear();
