@@ -114,15 +114,23 @@ const formatCurrency = (val: number) =>
 }
 
 .admin-mobile-bar {
-    position: sticky;
-    z-index: 100;
-    margin-top: auto;
+    /* MUDANÇA: 'Fixed' é mais seguro para garantir que fique visível no mobile */
+    /* Sticky as vezes falha com o teclado virtual ou barra de endereço */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+
+    z-index: 999;
     background: #fff;
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* MUDANÇA IMPORTANTE: Respeita a área segura do iPhone (Notch/Home Indicator) */
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 @media (min-width: 769px) {
@@ -136,10 +144,13 @@ const formatCurrency = (val: number) =>
 
 @media (max-width: 768px) {
     .admin-mobile-bar {
-        bottom: -1rem;
-        margin-left: -1rem;
-        margin-right: -1rem;
-        margin-bottom: -1rem;
+        position: fixed;
+        /* Força ficar na tela independente do scroll */
+        width: 100%;
+        margin: 0;
+        /* Zera as margens negativas antigas */
+        bottom: 0;
+        left: 0;
     }
 }
 
@@ -234,6 +245,7 @@ const formatCurrency = (val: number) =>
     max-height: 50vh;
     overflow-y: auto;
     background: #fafafa;
+    overscroll-behavior: contain;
 }
 
 .actions-row {
@@ -376,7 +388,6 @@ const formatCurrency = (val: number) =>
     cursor: not-allowed;
 }
 
-/* Animações */
 .slide-up-enter-active,
 .slide-up-leave-active {
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);

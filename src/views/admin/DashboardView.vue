@@ -573,15 +573,6 @@ onMounted(() => {
     min-height: 100vh;
 }
 
-@media (prefers-color-scheme: dark) {
-    .dashboard-wrapper {
-        background-image: radial-gradient(at 100% 0%, hsla(189, 68%, 15%, 0.4) 0px, transparent 50%),
-            radial-gradient(at 0% 0%, hsla(348, 83%, 20%, 0.4) 0px, transparent 50%);
-        --bg-glass: rgba(26, 28, 35, 0.85);
-        --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-    }
-}
-
 .dashboard-header {
     display: flex;
     justify-content: space-between;
