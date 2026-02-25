@@ -22,13 +22,18 @@ import {
     faCheckDouble,
     faClock,
     faUserShield,
-    faSave
+    faSave,
+    faHeadset,
+    faFilePdf,
+    faDownload,
+    faChevronDown
 } from '@fortawesome/free-solid-svg-icons'
 import { faPix } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import CancelOrderModal from '@/components/orders/CancelOrderModal.vue'
 import { useToast } from '@/stores/useToast'
 import ToastContainer from '@/components/ui/ToastContainer.vue'
+import html2pdf from 'html2pdf.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,6 +61,7 @@ interface Order {
     items: OrderItem[];
     summary: { deliveryFee: number; discount: number; };
     rawDeliveryDate: Date;
+    registeredBy?: { nome: string; email: string; tipo: string; } | null;
 }
 
 const { addToast } = useToast()
@@ -67,6 +73,25 @@ const isUpdatingStatus = ref(false)
 const selectedNewStatus = ref('')
 const isUpdatingPayment = ref(false)
 const selectedPaymentStatus = ref('')
+const receiptElement = ref<HTMLElement | null>(null)
+const isGeneratingPdf = ref(false)
+const paymentReceiptElement = ref<HTMLElement | null>(null)
+const isGeneratingPaymentPdf = ref(false)
+const showStatusDropdown = ref(false)
+const showPaymentDropdown = ref(false)
+
+const getStatusLabel = (val: string) => availableStatuses.find(s => s.value === val)?.label || 'Selecione...'
+const getPaymentLabel = (val: string) => paymentStatuses.find(s => s.value === val)?.label || 'Selecione...'
+
+const selectStatus = (val: string) => {
+    selectedNewStatus.value = val
+    showStatusDropdown.value = false
+}
+
+const selectPayment = (val: string) => {
+    selectedPaymentStatus.value = val
+    showPaymentDropdown.value = false
+}
 
 const paymentStatuses = [
     { value: 'PENDENTE', label: 'Pendente' },
@@ -164,7 +189,8 @@ const fetchOrderDetails = async (orderId: string) => {
                 quantity: i.quantidade,
                 price: Number(i.precoUnitarioCongelado),
                 image: i.produto.imagemCapa || '/images/placeholder.png'
-            }))
+            })),
+            registeredBy: data.cadastradoPor || null
         }
         if (order.value) {
             selectedNewStatus.value = data.status
@@ -291,6 +317,72 @@ const handleCancelOrder = async (reason: string) => {
     }
 }
 
+const downloadReceipt = async () => {
+    if (!order.value || !receiptElement.value) return
+
+    isGeneratingPdf.value = true
+    try {
+        const opt = {
+            margin: 10,
+            filename: `Recibo_Pedido_${order.value.id}.pdf`,
+            image: { type: 'jpeg' as const, quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: 800
+            },
+            jsPDF: {
+                unit: 'mm' as const,
+                format: 'a4' as const,
+                orientation: 'portrait' as const
+            },
+            pagebreak: {
+                mode: 'css',
+                before: '#page-break-before',
+                avoid: ['tr', '.pdf-totals-section']
+            }
+        }
+
+        await html2pdf().set(opt).from(receiptElement.value).save()
+        addToast('Recibo baixado com sucesso!', 'success')
+    } catch (e) {
+        console.error('Erro ao gerar PDF:', e)
+        addToast('Erro ao gerar o arquivo PDF.', 'error')
+    } finally {
+        isGeneratingPdf.value = false
+    }
+}
+
+const downloadPaymentReceipt = async () => {
+    if (!order.value || !paymentReceiptElement.value) return
+
+    isGeneratingPaymentPdf.value = true
+    try {
+        const opt = {
+            margin: 10,
+            filename: `Comprovante_Pagamento_${order.value.id}.pdf`,
+            image: { type: 'jpeg' as const, quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: 800
+            },
+            jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+            pagebreak: { mode: 'css', avoid: ['tr', '.pdf-totals-section'] }
+        }
+
+        await html2pdf().set(opt).from(paymentReceiptElement.value).save()
+        addToast('Comprovante baixado com sucesso!', 'success')
+    } catch (e) {
+        console.error('Erro ao gerar comprovante:', e)
+        addToast('Erro ao gerar o comprovante.', 'error')
+    } finally {
+        isGeneratingPaymentPdf.value = false
+    }
+}
+
 onMounted(() => {
     window.scrollTo(0, 0);
     if (route.params.id) fetchOrderDetails(route.params.id as string)
@@ -315,12 +407,38 @@ onMounted(() => {
                         <span class="admin-badge"><font-awesome-icon :icon="faUserShield" /> Admin View</span>
                         <h1>Pedido #{{ order.id }}</h1>
                     </div>
-                    <div class="status-badge" :class="order.status.toLowerCase()">
-                        {{ order.displayStatus }}
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button @click="downloadReceipt" class="btn-pdf" :disabled="isGeneratingPdf">
+                            <font-awesome-icon :icon="isGeneratingPdf ? faSpinner : faFilePdf"
+                                :spin="isGeneratingPdf" />
+                            {{ isGeneratingPdf ? 'Gerando...' : 'Baixar Recibo' }}
+                        </button>
+
+                        <button v-if="order.paymentStatus === 'PAGO'" @click="downloadPaymentReceipt"
+                            class="btn-pdf btn-receipt" :disabled="isGeneratingPaymentPdf">
+                            <font-awesome-icon :icon="isGeneratingPaymentPdf ? faSpinner : faReceipt"
+                                :spin="isGeneratingPaymentPdf" />
+                            {{ isGeneratingPaymentPdf ? 'Gerando...' : 'Comprovante' }}
+                        </button>
+
+                        <div class="status-badge" :class="order.status.toLowerCase()">
+                            {{ order.displayStatus }}
+                        </div>
                     </div>
                 </div>
-                <div class="meta-info">
-                    <font-awesome-icon :icon="faClock" /> Criado em: {{ order.requestDate }}
+                <div class="meta-container">
+                    <div class="meta-info">
+                        <font-awesome-icon :icon="faClock" /> Criado em: {{ order.requestDate }}
+                    </div>
+
+                    <div v-if="order.registeredBy" class="meta-info registered-by">
+                        <font-awesome-icon :icon="faHeadset" /> Registrado por:
+                        <strong>{{ order.registeredBy.nome.split(' ')[0] }}</strong>
+                        <span class="meta-email">({{ order.registeredBy.email }})</span>
+                    </div>
+                    <div v-else class="meta-info self-registered">
+                        <font-awesome-icon :icon="faUserCircle" /> Autoatendimento (Feito pelo Site)
+                    </div>
                 </div>
             </header>
 
@@ -385,18 +503,28 @@ onMounted(() => {
                             <h3>Atualizar Status</h3>
                         </div>
                         <div class="status-controls">
-                            <div class="select-wrapper">
-                                <select v-model="selectedNewStatus">
-                                    <option v-for="st in availableStatuses" :key="st.value" :value="st.value">
-                                        {{ st.label }}
-                                    </option>
-                                </select>
+                            <div class="custom-dropdown" tabindex="0" @blur="showStatusDropdown = false">
+                                <div class="dropdown-selected" @click="showStatusDropdown = !showStatusDropdown"
+                                    :class="{ 'is-open': showStatusDropdown }">
+                                    <span>{{ getStatusLabel(selectedNewStatus) }}</span>
+                                    <font-awesome-icon :icon="faChevronDown" class="chevron" />
+                                </div>
+                                <Transition name="drop-fade">
+                                    <ul v-if="showStatusDropdown" class="dropdown-options custom-scrollbar">
+                                        <li v-for="st in availableStatuses" :key="st.value"
+                                            @mousedown.prevent="selectStatus(st.value)"
+                                            :class="{ 'active': st.value === selectedNewStatus }">
+                                            {{ st.label }}
+                                        </li>
+                                    </ul>
+                                </Transition>
                             </div>
+
                             <button class="btn-save-status" @click="handleStatusUpdate"
                                 :disabled="isUpdatingStatus || selectedNewStatus === order.status">
                                 <font-awesome-icon :icon="isUpdatingStatus ? faSpinner : faSave"
                                     :spin="isUpdatingStatus" />
-                                {{ isUpdatingStatus ? 'Sal...' : 'Salvar' }}
+                                {{ isUpdatingStatus ? 'Salvando...' : 'Salvar' }}
                             </button>
                         </div>
                     </div>
@@ -406,13 +534,23 @@ onMounted(() => {
                             <h3>Pagamento</h3>
                         </div>
                         <div class="status-controls">
-                            <div class="select-wrapper">
-                                <select v-model="selectedPaymentStatus">
-                                    <option v-for="st in paymentStatuses" :key="st.value" :value="st.value">
-                                        {{ st.label }}
-                                    </option>
-                                </select>
+                            <div class="custom-dropdown" tabindex="0" @blur="showPaymentDropdown = false">
+                                <div class="dropdown-selected" @click="showPaymentDropdown = !showPaymentDropdown"
+                                    :class="{ 'is-open': showPaymentDropdown }">
+                                    <span>{{ getPaymentLabel(selectedPaymentStatus) }}</span>
+                                    <font-awesome-icon :icon="faChevronDown" class="chevron" />
+                                </div>
+                                <Transition name="drop-fade">
+                                    <ul v-if="showPaymentDropdown" class="dropdown-options">
+                                        <li v-for="st in paymentStatuses" :key="st.value"
+                                            @mousedown.prevent="selectPayment(st.value)"
+                                            :class="{ 'active': st.value === selectedPaymentStatus }">
+                                            {{ st.label }}
+                                        </li>
+                                    </ul>
+                                </Transition>
                             </div>
+
                             <button class="btn-save-payment" @click="handlePaymentUpdate"
                                 :disabled="isUpdatingPayment || selectedPaymentStatus === order.paymentStatus">
                                 <font-awesome-icon :icon="isUpdatingPayment ? faSpinner : faSave"
@@ -462,6 +600,184 @@ onMounted(() => {
                         <div class="summary-row total"><span>Total</span> <span>{{ formatCurrency(grandTotal) }}</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="receipt-hidden-container">
+            <div ref="receiptElement" class="pdf-receipt">
+                <div class="pdf-header">
+                    <img src="https://www.icepoint.com.br/assets/logo_full-CTT1BAul.png" alt="Ice Point Logo"
+                        class="pdf-logo" crossorigin="anonymous" />
+                    <div class="pdf-header-text">
+                        <h2>RECIBO DE PEDIDO</h2>
+                        <p><strong>Pedido #</strong>{{ order?.id }}</p>
+                        <p><strong>Data da Emissão:</strong> {{ new Date().toLocaleDateString('pt-BR') }}</p>
+                    </div>
+                </div>
+
+                <div class="pdf-section-row">
+                    <div class="pdf-box">
+                        <h3>DADOS DO CLIENTE</h3>
+                        <p><strong>Nome:</strong> {{ order?.customer.name }}</p>
+                        <p><strong>Email:</strong> {{ order?.customer.email }}</p>
+                        <p><strong>Telefone:</strong> {{ order?.customer.phone }}</p>
+                    </div>
+                    <div class="pdf-box">
+                        <h3>INFORMAÇÕES DA FESTA</h3>
+                        <p><strong>Data Agendada:</strong> {{ order?.date }} às {{ order?.time }}</p>
+                        <p><strong>Método:</strong> {{ order?.delivery.method === 'delivery' ? 'Entrega' :
+                            'Retirada na Loja' }}</p>
+                        <p><strong>Endereço:</strong> {{ order?.delivery.address }}</p>
+                    </div>
+                </div>
+
+                <div class="pdf-table-container">
+                    <h3>ITENS DO PEDIDO</h3>
+                    <table class="pdf-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px; text-align: center;">Img</th>
+                                <th style="width: 60px;">Qtd.</th>
+                                <th>Produto</th>
+                                <th style="text-align: right;">Preço Un.</th>
+                                <th style="text-align: right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in order?.items" :key="item.id">
+                                <td style="text-align: center;">
+                                    <img :src="item.image" class="pdf-item-img" crossorigin="anonymous" />
+                                </td>
+                                <td>{{ item.quantity }}x</td>
+                                <td>{{ item.name }}</td>
+                                <td style="text-align: right;">{{ formatCurrency(item.price) }}</td>
+                                <td style="text-align: right; font-weight: bold;">{{ formatCurrency(item.price *
+                                    item.quantity) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pdf-totals-section">
+                    <div class="pdf-payment-info">
+                        <p><strong>Forma de Pagamento:</strong> {{ order?.payment.method }}</p>
+                        <p><strong>Status do Pagamento:</strong> {{ order?.paymentStatus }}</p>
+                        <div class="pdf-cart-box">
+                            <p><strong>Carrinho:</strong> {{ order?.cart.name }}</p>
+                            <img :src="order?.cart.image" crossorigin="anonymous" />
+                        </div>
+                    </div>
+                    <div class="pdf-totals-box">
+                        <div class="pdf-total-row">
+                            <span>Subtotal:</span>
+                            <span>{{ formatCurrency(subtotal) }}</span>
+                        </div>
+                        <div class="pdf-total-row">
+                            <span>Taxa de Entrega:</span>
+                            <span>{{ formatCurrency(order?.summary.deliveryFee || 0) }}</span>
+                        </div>
+                        <div v-if="order?.summary.discount" class="pdf-total-row pdf-discount">
+                            <span>Desconto:</span>
+                            <span>- {{ formatCurrency(order.summary.discount) }}</span>
+                        </div>
+                        <div class="pdf-total-row pdf-grand-total">
+                            <span>TOTAL:</span>
+                            <span>{{ formatCurrency(grandTotal) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pdf-footer">
+                    <p>Obrigado por escolher a Ice Point Sorveteria para o seu evento!</p>
+                    <p>www.icepoint.com.br</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="receipt-hidden-container">
+            <div ref="paymentReceiptElement" class="pdf-receipt payment-receipt-mode">
+                <div class="pdf-header payment-header">
+                    <img src="https://www.icepoint.com.br/assets/logo_full-CTT1BAul.png" alt="Ice Point Logo"
+                        class="pdf-logo" crossorigin="anonymous" />
+                    <div class="pdf-header-text">
+                        <h2 style="color: #10b981;">COMPROVANTE DE PAGAMENTO</h2>
+                        <p><strong>Referência:</strong> Pedido #{{ order?.id }}</p>
+                        <p><strong>Emissão:</strong> {{ new Date().toLocaleDateString('pt-BR') }} às {{ new
+                            Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }}</p>
+                    </div>
+                </div>
+
+                <div class="payment-success-banner">
+                    <font-awesome-icon :icon="faCheckCircle"
+                        style="color: #10b981; font-size: 24px; margin-right: 10px; vertical-align: middle;" />
+                    <span style="font-size: 18px; font-weight: bold; color: #065f46; vertical-align: middle;">Pagamento
+                        Confirmado</span>
+                </div>
+
+                <div class="pdf-section-row">
+                    <div class="pdf-box">
+                        <h3>DADOS DO PAGADOR</h3>
+                        <p><strong>Nome:</strong> {{ order?.customer.name }}</p>
+                        <p><strong>CPF/CNPJ:</strong> {{ userStore.user?.cpf || 'Não informado' }}</p>
+                        <p><strong>Email:</strong> {{ order?.customer.email }}</p>
+                    </div>
+                    <div class="pdf-box">
+                        <h3>DETALHES DA TRANSAÇÃO</h3>
+                        <p><strong>Valor Pago:</strong> <span
+                                style="color: #10b981; font-weight: bold; font-size: 15px;">{{
+                                    formatCurrency(grandTotal) }}</span></p>
+                        <p><strong>Método de Pagamento:</strong> {{ order?.payment.method }}</p>
+                        <p><strong>Status Atual:</strong> {{ order?.paymentStatus }}</p>
+                    </div>
+                </div>
+
+                <div class="pdf-table-container">
+                    <h3>RESUMO DOS ITENS PAGOS</h3>
+                    <table class="pdf-table">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th style="text-align: right;">Quantidade</th>
+                                <th style="text-align: right;">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Produtos ({{ order?.items.length }} Itens Diferentes)</td>
+                                <td style="text-align: right;">-</td>
+                                <td style="text-align: right;">{{ formatCurrency(subtotal) }}</td>
+                            </tr>
+                            <tr v-if="order?.summary.deliveryFee">
+                                <td>Taxa de Serviço / Entrega</td>
+                                <td style="text-align: right;">1x</td>
+                                <td style="text-align: right;">{{ formatCurrency(order.summary.deliveryFee) }}</td>
+                            </tr>
+                            <tr v-if="order?.summary.discount">
+                                <td>Desconto Aplicado</td>
+                                <td style="text-align: right;">-</td>
+                                <td style="text-align: right; color: #16a34a;">- {{
+                                    formatCurrency(order.summary.discount) }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"
+                                    style="text-align: right; font-weight: bold; border-top: 2px solid #e2e8f0; padding-top: 15px;">
+                                    TOTAL PAGO:</td>
+                                <td
+                                    style="text-align: right; font-weight: bold; border-top: 2px solid #e2e8f0; padding-top: 15px; font-size: 16px;">
+                                    {{ formatCurrency(grandTotal) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="pdf-footer" style="margin-top: 80px;">
+                    <p>Este documento serve como comprovante de quitação dos valores referentes ao pedido #{{ order?.id
+                    }}.</p>
+                    <p style="font-weight: bold; margin-top: 10px;">Sorveteria Ice Point</p>
+                    <p>CNPJ: 39.256.511/0001-04</p>
                 </div>
             </div>
         </div>
@@ -571,7 +887,6 @@ onMounted(() => {
     gap: 0.5rem;
 }
 
-/* Status Badge */
 .status-badge {
     padding: 0.5rem 1.2rem;
     border-radius: 50px;
@@ -593,6 +908,13 @@ onMounted(() => {
 .status-badge.entregue {
     background: #dcfce7;
     color: #166534;
+}
+
+.status-badge.concluido {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+    border: 1px solid #059669;
 }
 
 .status-badge.cancelado {
@@ -629,7 +951,6 @@ onMounted(() => {
     left: 0;
     height: 4px;
     background: #3b82f6;
-    /* Admin Blue */
     transition: width 0.5s ease;
 }
 
@@ -677,6 +998,10 @@ onMounted(() => {
     color: white;
 }
 
+.step-item.completed span {
+    color: #1e40af;
+}
+
 .cancelled-banner {
     background: #fee2e2;
     color: #991b1b;
@@ -689,14 +1014,12 @@ onMounted(() => {
     margin-bottom: 2rem;
 }
 
-/* Grid */
 .details-grid {
     display: grid;
     grid-template-columns: 1fr 350px;
     gap: 1.5rem;
 }
 
-/* Cards Comuns */
 .card {
     background: white;
     border-radius: 12px;
@@ -733,7 +1056,6 @@ onMounted(() => {
     color: #f97316;
 }
 
-/* Lista de Itens */
 .item-row {
     display: flex;
     align-items: center;
@@ -781,7 +1103,6 @@ onMounted(() => {
     color: #334155;
 }
 
-/* Mini Cards */
 .mini-cards-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -815,7 +1136,6 @@ onMounted(() => {
     object-fit: contain;
 }
 
-/* Sidebar Info */
 .info-content p {
     margin: 0 0 0.5rem 0;
     display: flex;
@@ -846,7 +1166,6 @@ onMounted(() => {
     font-size: 0.9rem;
 }
 
-/* Resumo */
 .summary-row {
     display: flex;
     justify-content: space-between;
@@ -934,33 +1253,102 @@ onMounted(() => {
     gap: 0.5rem;
 }
 
-.select-wrapper {
+.custom-dropdown {
     flex-grow: 1;
     position: relative;
+    outline: none;
 }
 
-.select-wrapper select {
+.dropdown-selected {
     width: 100%;
-    padding: 0.8rem;
+    padding: 0.8rem 1rem;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     background-color: #f8fafc;
     color: #334155;
-    font-family: inherit;
     font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
-    appearance: none;
-    /* Remove estilo padrão do browser */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
 }
 
-.select-wrapper select:focus {
-    outline: none;
+.dropdown-selected:hover {
+    border-color: #cbd5e1;
+    background-color: #f1f5f9;
+}
+
+.dropdown-selected.is-open {
     border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dropdown-selected .chevron {
+    color: #94a3b8;
+    transition: transform 0.3s ease;
+}
+
+.dropdown-selected.is-open .chevron {
+    transform: rotate(180deg);
+    color: #3b82f6;
+}
+
+.dropdown-options {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    list-style: none;
+    padding: 0.4rem;
+    margin: 0;
+    z-index: 50;
+    max-height: 200px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.dropdown-options li {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 2px;
+}
+
+.dropdown-options li:last-child {
+    margin-bottom: 0;
+}
+
+.dropdown-options li:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
+.dropdown-options li.active {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    font-weight: 600;
+}
+
+.drop-fade-enter-active,
+.drop-fade-leave-active {
+    transition: all 0.2s ease;
+}
+
+.drop-fade-enter-from,
+.drop-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
 }
 
 .btn-save-status {
@@ -1014,5 +1402,293 @@ onMounted(() => {
     .step-item {
         min-width: 70px;
     }
+}
+
+.meta-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 0.8rem;
+}
+
+.meta-info {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.registered-by {
+    color: #0369a1;
+    background: #e0f2fe;
+    padding: 0.2rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.85rem;
+}
+
+.registered-by strong {
+    font-weight: 700;
+}
+
+.meta-email {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.self-registered {
+    color: #15803d;
+    background: #dcfce7;
+    padding: 0.2rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.btn-pdf {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-title);
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.btn-pdf:hover:not(:disabled) {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+}
+
+.btn-pdf:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.receipt-hidden-container {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 800px;
+}
+
+.pdf-receipt {
+    width: 700px;
+    padding: 30px;
+    background: #ffffff;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #333;
+    box-sizing: border-box;
+}
+
+.pdf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #1e3a8a;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.pdf-logo {
+    height: 50px;
+    object-fit: contain;
+}
+
+.pdf-header-text {
+    text-align: right;
+}
+
+.pdf-header-text h2 {
+    margin: 0 0 10px 0;
+    color: #1e3a8a;
+    font-size: 24px;
+    letter-spacing: 1px;
+}
+
+.pdf-header-text p {
+    margin: 3px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.pdf-section-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+}
+
+.pdf-box {
+    width: 48%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 15px;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.pdf-box h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #1e3a8a;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 5px;
+}
+
+.pdf-box p {
+    margin: 5px 0;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.pdf-table-container {
+    margin-bottom: 30px;
+}
+
+.pdf-table-container h3 {
+    font-size: 16px;
+    color: #1e3a8a;
+    margin-bottom: 10px;
+}
+
+.pdf-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.pdf-table th {
+    background-color: #1e3a8a;
+    color: white;
+    padding: 12px 10px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.pdf-table td {
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.pdf-item-img {
+    width: 35px;
+    height: 35px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+    margin: 0 auto;
+}
+
+.pdf-totals-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-top: 20px;
+}
+
+.pdf-payment-info {
+    width: 45%;
+    font-size: 13px;
+    color: #666;
+}
+
+.pdf-payment-info p {
+    margin: 4px 0;
+}
+
+.pdf-cart-box {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+.pdf-cart-box img {
+    height: 40px;
+    margin-top: 5px;
+}
+
+.pdf-totals-box {
+    width: 45%;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    box-sizing: border-box;
+}
+
+.pdf-total-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #475569;
+}
+
+.pdf-discount {
+    color: #16a34a;
+}
+
+.pdf-grand-total {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #cbd5e1;
+    font-weight: bold;
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.pdf-footer {
+    margin-top: 50px;
+    text-align: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 20px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.btn-receipt {
+    background-color: #10b981;
+}
+
+.btn-receipt:hover:not(:disabled) {
+    background-color: #059669;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
+.payment-receipt-mode .payment-header {
+    border-bottom: 3px solid #10b981;
+}
+
+.payment-success-banner {
+    background-color: #d1fae5;
+    border: 1px solid #10b981;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.payment-receipt-mode .pdf-table th {
+    background-color: #f8fafc;
+    color: #475569;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.payment-receipt-mode .pdf-box h3 {
+    color: #065f46;
+}
+
+.payment-receipt-mode .pdf-table-container h3 {
+    color: #065f46;
 }
 </style>

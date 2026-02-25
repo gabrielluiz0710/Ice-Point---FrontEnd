@@ -44,7 +44,12 @@ const weekOffset = ref(0);
 const errorMessage = ref('');
 const expandedDays = ref<string[]>([]);
 const router = useRouter()
-const formatDateIso = (date: Date) => date.toISOString().split('T')[0];
+const formatDateIso = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
 
 const getStartOfWeek = (date: Date) => {
     const d = new Date(date);
@@ -54,10 +59,16 @@ const getStartOfWeek = (date: Date) => {
 
 const weekDays = computed<DiaCalendario[]>(() => {
     const days: DiaCalendario[] = [];
-    const start = new Date(startDate.value);
+
+    const start = new Date(
+        startDate.value.getFullYear(),
+        startDate.value.getMonth(),
+        startDate.value.getDate(),
+        12, 0, 0
+    );
 
     for (let i = 0; i < 7; i++) {
-        const current = new Date(start);
+        const current = new Date(start.getTime());
         current.setDate(start.getDate() + i);
 
         const iso = formatDateIso(current);
@@ -211,7 +222,24 @@ onMounted(() => {
             </div>
         </div>
 
-        <div v-if="errorMessage" class="error-banner">
+        <div v-if="loading" class="modern-loading-overlay">
+            <div class="spinner-container">
+                <div class="pulse-ring"></div>
+                <font-awesome-icon :icon="faIceCream" class="loading-icon" bounce />
+            </div>
+            <h3 class="loading-title">Buscando encomendas...</h3>
+            <p class="loading-subtitle">Preparando a sua agenda da semana</p>
+
+            <div class="skeleton-grid">
+                <div class="skel-col" v-for="i in (isMobile ? 1 : 5)" :key="i">
+                    <div class="skel-header"></div>
+                    <div class="skel-card"></div>
+                    <div class="skel-card delay"></div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else-if="errorMessage" class="error-banner">
             <span>⚠️ {{ errorMessage }}</span>
             <button @click="fetchEncomendas" class="btn-retry">Tentar novamente</button>
         </div>
@@ -818,6 +846,129 @@ onMounted(() => {
     .nav-buttons {
         order: 3;
         flex: 0 0 auto;
+    }
+}
+
+.modern-loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    background: transparent;
+    padding: 2rem 1rem;
+    animation: fadeIn 0.4s ease;
+}
+
+.spinner-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(59, 130, 246, 0.2);
+    border-radius: 50%;
+    animation: pulsing 1.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.loading-icon {
+    font-size: 2.5rem;
+    color: var(--c-azul, #3b82f6);
+    z-index: 2;
+}
+
+.loading-title {
+    font-size: 1.4rem;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+    font-weight: 800;
+}
+
+.loading-subtitle {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0 0 2.5rem 0;
+}
+
+.skeleton-grid {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    max-width: 1000px;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.skel-col {
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.skel-header,
+.skel-card {
+    background: #e2e8f0;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+}
+
+.skel-header {
+    height: 60px;
+    border-radius: 16px;
+}
+
+.skel-card {
+    height: 120px;
+}
+
+.skel-card.delay {
+    animation-delay: 0.2s;
+    opacity: 0.7;
+}
+
+@keyframes pulsing {
+    0% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .skeleton-grid {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .skel-col {
+        width: 100%;
+        max-width: 100%;
     }
 }
 </style>
