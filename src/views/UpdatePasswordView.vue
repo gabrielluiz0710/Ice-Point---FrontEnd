@@ -94,8 +94,8 @@ const handleUpdate = async () => {
                 </div>
 
                 <div class="input-group">
+                    <label for="confPass">Confirmar Senha</label>
                     <div class="password-wrapper">
-                        <label for="confPass">Confirmar Senha</label>
                         <input id="confPass" :type="showConfirmPassword ? 'text' : 'password'" v-model="confirmPassword"
                             required placeholder="••••••••" />
                         <button type="button" class="toggle-btn" @click="showConfirmPassword = !showConfirmPassword"

@@ -290,10 +290,16 @@ onMounted(() => {
 
     const hash = window.location.hash
 
-    if (hash && hash.includes('error_code=otp_expired')) {
-        router.replace('/login')
+    if (hash && hash.includes('access_token')) {
+        window.location.hash = ''
         isLoginMode.value = true
         showSuccessModal.value = true
+        return
+    }
+
+    if (hash && hash.includes('error_code=otp_expired')) {
+        window.location.hash = ''
+        showFeedback('O link expirou. Por favor, solicite um novo.', 'error')
         return
     }
 

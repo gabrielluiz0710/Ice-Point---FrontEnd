@@ -185,18 +185,6 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
-  if (
-    to.hash.includes('access_token') ||
-    to.query.code ||
-    to.hash.includes('type=recovery') ||
-    to.hash.includes('error=')
-  ) {
-    console.log(
-      '[Router] Detectado token ou erro de auth na URL. Permitindo renderização para tratamento local...',
-    )
-    return next()
-  }
-
   if (!userStore.isReady) {
     console.log('[Router] App iniciou ou recarregou. Verificando sessão...')
     await userStore.initializeAuth()

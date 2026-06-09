@@ -312,13 +312,6 @@ export const useCheckoutStore = defineStore('checkout', () => {
             ? address.value.state
             : deliveryAddress.value.state
           : undefined,
-
-      fullAddress:
-        deliveryMethod.value === 'delivery'
-          ? useSameAddressForDelivery.value
-            ? address.value
-            : deliveryAddress.value
-          : null,
     }
 
     const response = await fetch(`${API_URL}/cart/checkout`, {

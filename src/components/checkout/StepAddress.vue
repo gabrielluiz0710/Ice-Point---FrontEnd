@@ -957,7 +957,8 @@ const addressFormFields = [
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem 1.25rem
+    gap: 1.5rem 1.25rem;
+    margin-top: 1rem;
 }
 
 .form-field {
