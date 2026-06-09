@@ -251,7 +251,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
       paymentMode.value === 'online' ? 'ONLINE' : paymentMethod.value.toUpperCase()
 
     const payload = {
-      userId: userStore.user?.id || null,
+      // userId removido — backend infere via token JWT (OptionalJwtAuthGuard)
       items: cartStore.cartItems.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
